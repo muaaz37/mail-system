@@ -1,0 +1,92 @@
+<p-toast />
+<div class="flex items-center justify-center min-h-screen bg-gray-50">
+  <div class="card w-full max-w-md p-8 shadow-lg">
+    <h2 class="text-2xl font-bold text-center mb-6">Register</h2>
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+      <div class="flex flex-col gap-1">
+        <p-floatlabel variant="on">
+          <input
+            pInputText
+            type="text"
+            id="firstName"
+            formControlName="firstName"
+            [invalid]="isInvalid('firstName')"
+            class="w-full"
+          />
+          <label for="firstName">First Name</label>
+        </p-floatlabel>
+        @if (isInvalid('firstName')) {
+          <p-message severity="error" size="small" variant="simple"
+            >First name is required.</p-message
+          >
+        }
+      </div>
+      <div class="flex flex-col gap-1">
+        <p-floatlabel variant="on">
+          <input
+            pInputText
+            type="text"
+            id="lastName"
+            formControlName="lastName"
+            [invalid]="isInvalid('lastName')"
+            class="w-full"
+          />
+          <label for="lastName">Last Name</label>
+        </p-floatlabel>
+        @if (isInvalid('lastName')) {
+          <p-message severity="error" size="small" variant="simple"
+            >Last name is required.</p-message
+          >
+        }
+      </div>
+      <div class="flex flex-col gap-1">
+        <p-floatlabel variant="on">
+          <input
+            pInputText
+            type="email"
+            id="email"
+            formControlName="email"
+            [invalid]="isInvalid('email')"
+            class="w-full"
+          />
+          <label for="email">Email</label>
+        </p-floatlabel>
+        @if (isInvalid('email')) {
+          @if (registerForm.get('email')?.errors?.['required']) {
+            <p-message severity="error" size="small" variant="simple">Email is required.</p-message>
+          }
+          @if (registerForm.get('email')?.errors?.['email']) {
+            <p-message severity="error" size="small" variant="simple"
+              >Please enter a valid email.</p-message
+            >
+          }
+        }
+      </div>
+      <div class="flex flex-col gap-1">
+        <p-floatlabel variant="on">
+          <input
+            pInputText
+            type="password"
+            id="password"
+            formControlName="password"
+            [invalid]="isInvalid('password')"
+            class="w-full"
+          />
+          <label for="password">Password</label>
+        </p-floatlabel>
+        @if (isInvalid('password')) {
+          <p-message severity="error" size="small" variant="simple"
+            >Password should be least 6 characters</p-message
+          >
+        }
+      </div>
+      <button pButton severity="contrast" type="submit" class="w-full mt-2">
+        <span pButtonLabel>Register</span>
+      </button>
+    </form>
+    <p class="text-center mt-4">
+      Already have an account?
+      <a routerLink="/login" class="underline">Login here</a>
+    </p>
+  </div>
+</div>

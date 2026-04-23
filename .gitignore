@@ -1,0 +1,26 @@
+# OS / Editor
+.DS_Store
+.idea/
+*.iml
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Frontend build/deps
+frontend/node_modules/
+frontend/.angular/
+frontend/dist/
+frontend/.git.backup/
+
+# Backend local build/cache
+backend/.gradle/
+backend/.gradle-user/
+backend/.kotlin/
+backend/build/
+backend/.idea/
+
+# Runtime uploads
+uploads/
+backend/uploads/

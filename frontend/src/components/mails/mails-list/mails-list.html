@@ -1,0 +1,42 @@
+<div class="w-full flex justify-center">
+  <div class="w-full max-w-6xl">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="border-b border-gray-200 p-6">
+        <h2 class="text-2xl font-semibold text-gray-800">{{ title }}</h2>
+      </div>
+      <div class="overflow-y-auto max-h-[calc(100vh-115px)]">
+        @if (isLoading) {
+          <div>
+            @for (i of [1, 2, 3, 4, 5]; track i) {
+              <div
+                class="p-4 flex gap-3 border-b border-gray-200 last:border-b-0 animate-pulse hover:bg-gray-50"
+              >
+                <div class="w-10 h-10 bg-gray-200 rounded-full shrink-0"></div>
+                <div class="flex-1 min-w-0">
+                  <div class="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                  <div class="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+                <div class="h-4 bg-gray-200 rounded w-16 shrink-0"></div>
+              </div>
+            }
+          </div>
+        } @else {
+          @if (mails.length > 0) {
+            <div>
+              @for (mail of mails; track mail.id) {
+                <div class="border-b border-gray-200 last:border-b-0">
+                  <app-mails-list-element [mail]="mail" />
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="flex items-center justify-center p-12">
+              <p class="text-gray-500 text-lg">No mails found</p>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+</div>

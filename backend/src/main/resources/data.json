@@ -1,0 +1,91 @@
+{
+  "users": [
+    {
+      "firstName": "Ameline",
+      "lastName": "Allanson",
+      "email": "aallanson@example.com",
+      "password": "123456"
+    },
+    {
+      "firstName": "Sanson",
+      "lastName": "Vardey",
+      "email": "svardey1@example.com",
+      "password": "123456"
+    },
+    {
+      "firstName": "Jami",
+      "lastName": "Poe",
+      "email": "jpoe@example.uk",
+      "password": "123456"
+    },
+    {
+      "firstName": "Trent",
+      "lastName": "Ianno",
+      "email": "tianno3@example.com",
+      "password": "123456"
+    },
+    {
+      "firstName": "Alikee",
+      "lastName": "Raisbeck",
+      "email": "araisbeck4@example.com",
+      "password": "123456"
+    }
+  ],
+  "mails": [
+    {
+      "senderEmail": "svardey1@example.com",
+      "subject": "Re: Hello",
+      "content": "Got it, Trent. The test email came through perfectly.",
+      "status": "DRAFT",
+      "toEmails": ["tianno3@example.com"],
+      "ccEmails": ["araisbeck4@example.com"],
+      "bccEmails": [],
+      "replyToEmails": []
+    },
+    {
+      "senderEmail": "aallanson@example.com",
+      "subject": "UI Update: PrimeNG components",
+      "content": "The new components for the detailed mail view are almost ready. Let's review the layout tomorrow.",
+      "status": "SENT",
+      "toEmails": ["jpoe@example.uk", "tianno3@example.com"],
+      "ccEmails": ["svardey1@example.com"],
+      "bccEmails": ["araisbeck4@example.com"],
+      "replyToEmails": []
+    },
+    {
+      "senderEmail": "jpoe@example.uk",
+      "subject": "Weekly Sync Agenda",
+      "content": "Hi team, please find the agenda for our upcoming meeting attached. Let me know if you want to add any topics.",
+      "status": "SENT",
+      "toEmails": [
+        "aallanson@example.com",
+        "svardey1@example.com",
+        "tianno3@example.com",
+        "araisbeck4@example.com"
+      ],
+      "ccEmails": [],
+      "bccEmails": [],
+      "replyToEmails": ["jpoe@example.uk"]
+    },
+    {
+      "senderEmail": "araisbeck4@example.com",
+      "subject": "Quick question about the data model",
+      "content": "Could you clarify if we are making the CC and BCC fields optional in the next database migration?",
+      "status": "DRAFT",
+      "toEmails": ["aallanson@example.com"],
+      "ccEmails": [],
+      "bccEmails": [],
+      "replyToEmails": []
+    },
+    {
+      "senderEmail": "tianno3@example.com",
+      "subject": "Lunch today?",
+      "content": "Anyone up for grabbing lunch around 1 PM?",
+      "status": "SENT",
+      "toEmails": ["svardey1@example.com", "jpoe@example.uk"],
+      "ccEmails": [],
+      "bccEmails": [],
+      "replyToEmails": []
+    }
+  ]
+}

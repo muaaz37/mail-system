@@ -1,0 +1,177 @@
+<p-toast />
+<div class="min-h-screen px-6">
+  <div
+    class="rounded-2xl bg-white border-b border-gray-200 p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm"
+  >
+    <div class="flex items-center gap-3">
+      <p-button
+        (click)="goBack()"
+        severity="secondary"
+        icon="pi pi-arrow-left"
+        class="p-button-text p-button-rounded p-button-secondary"
+        pTooltip="Back"
+      />
+      <p-divider layout="vertical" />
+      @if(isUserSender()){
+        <p-button
+          (click)="sendMail()"
+          severity="secondary"
+          icon="pi pi-envelope"
+          class="p-button-text p-button-rounded p-button-secondary"
+          pTooltip="Send Mail"
+        />
+        @if(mail()!.status === 'DRAFT') {
+          <p-button
+            (click)="editMail()"
+            severity="secondary"
+            icon="pi pi-pencil"
+            class="p-button-text p-button-rounded p-button-secondary"
+            pTooltip="Edit Mail"
+          />
+        }
+        <p-button
+          (click)="deleteMail()"
+          severity="secondary"
+          icon="pi pi-trash"
+          class="p-button-text p-button-rounded p-button-secondary"
+          pTooltip="Delete Mail"
+        />
+
+      }
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center items-center h-96">
+      <p-progress-spinner strokeWidth="4" />
+    </div>
+  } @else if (mail()) {
+    <div class="mx-auto mt-6 animate-fadeIn">
+      <div class="bg-white md:rounded-2xl md:shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-8 py-6 border-b border-gray-100">
+          <div class="flex justify-between items-center">
+            <h1 class="text-2xl font-semibold text-gray-800">{{ mail()!.subject }}</h1>
+            <div class="flex items-center gap-2">
+              <p-tag [value]="mail()?.status" [severity]="getSeverityBadge(mail()!.status)"></p-tag>
+              <p-tag [value]="mail()?.source" [severity]="getSourceBadge(mail()!.source)"></p-tag>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="px-8 py-4 flex flex-wrap justify-between items-center gap-4">
+          <div class="flex items-center gap-3">
+            <p-avatar
+              [label]="mail()!.sender.firstName.charAt(0)"
+              size="large"
+              shape="circle"
+              [style]="{ 'background-color': '#dee2e6', color: '#495057' }"
+            >
+            </p-avatar>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-gray-900"
+                  >{{ mail()!.sender.firstName }} {{ mail()!.sender.lastName }}</span
+                >
+                <span class="text-gray-500 text-sm">&lt;{{ mail()!.sender.email }}&gt;</span>
+              </div>
+              <div class="text-xs text-gray-500 mt-1">
+                To:
+                @for (recipient of mail()!.to; track recipient.id; let last = $last) {
+                  <span>{{ recipient.firstName }}{{ !last ? ', ' : '' }}</span>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-8 py-2 bg-gray-50/50 border-y border-gray-100">
+          <div class="text-xs space-y-1 py-2">
+            @if (mail()!.cc.length) {
+              <p>
+                <span class="font-semibold text-gray-400 uppercase mr-2">Cc:</span>
+                {{ getEmailString(mail()!.cc) }}
+              </p>
+            }
+            @if (mail()!.bcc.length) {
+              <p>
+                <span class="font-semibold text-gray-400 uppercase mr-2">Bcc:</span>
+                {{ getEmailString(mail()!.bcc) }}
+              </p>
+            }
+            @if (mail()!.replyTo.length) {
+              <p>
+                <span class="font-semibold text-gray-400 uppercase mr-2">Reply To:</span>
+                {{ getEmailString(mail()!.replyTo) }}
+              </p>
+            }
+          </div>
+        </div>
+
+        <div class="px-8 py-3 bg-gray-50/30 border-b border-gray-100">
+          <div class="text-xs space-y-1.5 text-gray-600">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-calendar-plus text-gray-400"></i>
+              <span class="font-semibold text-gray-500">Created:</span>
+              <span>{{ formatDate(mail()!.createdAt) }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="pi pi-pencil text-gray-400"></i>
+              <span class="font-semibold text-gray-500">Last Updated:</span>
+              <span>{{ formatDate(mail()!.updatedAt) }}</span>
+            </div>
+            @if (mail()!.sentAt) {
+              <div class="flex items-center gap-2">
+                <i class="pi pi-send text-gray-400"></i>
+                <span class="font-semibold text-gray-500">Sent:</span>
+                <span>{{ formatDate(mail()!.sentAt!) }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="px-8 py-10 min-h-64">
+          <div class="text-gray-800 leading-relaxed whitespace-pre-wrap text-base">
+            {{ mail()!.content }}
+          </div>
+        </div>
+
+        @if (mail()!.attachments.length) {
+          <div class="px-8 py-6 bg-gray-50 border-t border-gray-100">
+            <h4 class="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
+              <i class="pi pi-paperclip"></i> Attachments ({{ mail()!.attachments.length }})
+            </h4>
+            <div class="flex flex-wrap gap-3">
+              @for (attachment of mail()!.attachments; track attachment.fileName) {
+                <div
+                  [className]="
+                    'flex items-center gap-3 p-4 bg-gray-100 border border-gray-300 rounded-md'
+                  "
+                >
+                  <div class="flex flex-col gap-1">
+                    <span class="text-sm font-medium text-gray-700">{{ attachment.fileName }}</span>
+                    <span class="text-xs text-gray-400"
+                      >{{ (attachment.size / 1024).toFixed(1) }} KB</span
+                    >
+                    <p-image
+                      [src]="attachment.url"
+                      [preview]="true"
+                      loading="lazy"
+                      alt="Image preview"
+                      [className]="'w-20 h-20 object-cover rounded-md mt-1 cursor-pointer'"
+                    />
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="flex flex-col items-center justify-center h-96 text-gray-400">
+      <i class="pi pi-envelope-slash text-6xl mb-4"></i>
+      <p class="text-xl">Mail not found</p>
+    </div>
+  }
+</div>

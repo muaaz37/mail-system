@@ -1,0 +1,211 @@
+<div class="w-full flex justify-center">
+  <div class="w-full max-w-6xl">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="border-b border-gray-200 p-6">
+        <h2 class="text-2xl font-semibold text-gray-800">{{ title }}</h2>
+      </div>
+      <div class="p-6">
+        <form [formGroup]="mailForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-6">
+          <div class="flex flex-col gap-2">
+            <label for="subject" class="text-sm font-semibold text-slate-700">Subject</label>
+            <input
+              id="subject"
+              type="text"
+              pInputText
+              formControlName="subject"
+              class="w-full"
+              placeholder="Enter email subject"
+            />
+            @if (mailForm.get('subject')?.invalid && mailForm.get('subject')?.touched) {
+              <small class="mt-1 text-sm text-red-600">
+                Subject is required and must be between 1 and 20 characters
+              </small>
+            }
+          </div>
+          <div class="flex flex-col gap-2">
+            <label for="content" class="text-sm font-semibold text-slate-700">Content</label>
+            <textarea
+              id="content"
+              pTextarea
+              formControlName="content"
+              rows="8"
+              class="w-full"
+              placeholder="Enter email content"
+            ></textarea>
+            @if (mailForm.get('content')?.invalid && mailForm.get('content')?.touched) {
+              <small class="mt-1 text-sm text-red-600">
+                Content is required and must be between 1 and 500 characters
+              </small>
+            }
+          </div>
+          <div class="flex flex-col gap-4">
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-semibold text-slate-700 w-20">To</label>
+              <p-multiSelect
+                [options]="availableUsers()"
+                [(ngModel)]="selectedToUsers"
+                [ngModelOptions]="{ standalone: true }"
+                display="chip"
+                optionLabel="email"
+                optionValue="id"
+                placeholder="Select recipients"
+                [maxSelectedLabels]="6"
+                class="w-full"
+              ></p-multiSelect>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-semibold text-slate-700 w-20">CC</label>
+              <p-multiSelect
+                [options]="availableUsers()"
+                [(ngModel)]="selectedCcUsers"
+                [ngModelOptions]="{ standalone: true }"
+                display="chip"
+                optionLabel="email"
+                optionValue="id"
+                placeholder="Select CC recipients"
+                [maxSelectedLabels]="6"
+                class="w-full"
+              ></p-multiSelect>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-semibold text-slate-700 w-20">BCC</label>
+              <p-multiSelect
+                [options]="availableUsers()"
+                [(ngModel)]="selectedBccUsers"
+                [ngModelOptions]="{ standalone: true }"
+                display="chip"
+                optionLabel="email"
+                optionValue="id"
+                placeholder="Select BCC recipients"
+                [maxSelectedLabels]="6"
+                class="w-full"
+              ></p-multiSelect>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-semibold text-slate-700 w-20">Reply To</label>
+              <p-multiSelect
+                [options]="availableUsers()"
+                [(ngModel)]="selectedReplyToUsers"
+                [ngModelOptions]="{ standalone: true }"
+                display="chip"
+                optionLabel="email"
+                optionValue="id"
+                placeholder="Select Reply To recipients"
+                [maxSelectedLabels]="6"
+                class="w-full"
+              ></p-multiSelect>
+            </div>
+          </div>
+          @if (attachments().length) {
+            <div class="flex items-center gap-3 p-2 mb-2">
+              @for (attachment of attachments(); track attachment.fileName) {
+                <div
+                  [className]="
+                    'flex items-center gap-3 p-4 bg-gray-100 border border-gray-300 rounded-md'
+                  "
+                >
+                  <div class="flex flex-col gap-1">
+                    <span class="text-sm font-medium text-gray-700">{{ attachment.fileName }}</span>
+                    <span class="text-xs text-gray-400"
+                      >{{ (attachment.size / 1024).toFixed(1) }} KB</span
+                    >
+                    <p-image
+                      [src]="attachment.url"
+                      [preview]="true"
+                      loading="lazy"
+                      zoomInIcon="pi pi-search-plus"
+                      zoomOutIcon="pi pi-search-minus"
+                      alt="Image preview"
+                      [className]="'w-20 h-20 object-cover rounded-md mt-1 cursor-pointer'"
+                    />
+                  </div>
+
+                  <button
+                    pButton
+                    type="button"
+                    severity="danger"
+                    class="ml-auto p-button-rounded p-button-text"
+                    (click)="onExistingFileRemove(attachment)"
+                  >
+                    <span pButtonIcon class="pi pi-times"></span>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+          <div>
+            <p-fileupload
+              name="attachments"
+              [multiple]="true"
+              accept="image/*"
+              [maxFileSize]="1000000"
+              mode="advanced"
+              [showUploadButton]="false"
+              [showCancelButton]="false"
+              (onSelect)="onFileSelect($event)"
+              (onRemove)="onFileRemove($event)"
+              [customUpload]="true"
+            >
+              <ng-template #empty>
+                <div>Drag and drop files to here to upload.</div>
+              </ng-template>
+            </p-fileupload>
+          </div>
+          @if (mailData) {
+            <div class="flex items-center gap-2">
+              <button
+                pButton
+                severity="contrast"
+                type="submit"
+                class="w-full mt-2"
+                [loading]="isLoading()"
+              >
+                <span pButtonIcon class="pi pi-send"></span>
+                <span pButtonLabel>Update</span>
+              </button>
+            </div>
+          } @else {
+            <div class="flex items-center gap-2">
+              <button
+                pButton
+                severity="contrast"
+                type="submit"
+                class="w-full mt-2"
+                [loading]="isLoading()"
+              >
+                <span pButtonIcon class="pi pi-send"></span>
+                <span pButtonLabel>Send</span>
+              </button>
+              <button
+                pButton
+                severity="info"
+                type="button"
+                class="w-full mt-2"
+                [loading]="isLoading()"
+                (click)="onSaveDraft()"
+              >
+                <span pButtonIcon class="pi pi-save"></span>
+                <span pButtonLabel>Save as Draft</span>
+              </button>
+              <button
+                pButton
+                severity="secondary"
+                type="button"
+                class="w-full mt-2"
+                [disabled]="isLoading()"
+                (click)="resetForm()"
+              >
+                <span pButtonIcon class="pi pi-times"></span>
+                <span pButtonLabel>Reset</span>
+              </button>
+            </div>
+          }
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p-toast position="top-right"></p-toast>
