@@ -27,7 +27,8 @@
             ],
             "styles": [
               "src/styles.css"
-            ]
+            ],
+            "outputPath": "build/install"
           },
           "configurations": {
             "production": {
