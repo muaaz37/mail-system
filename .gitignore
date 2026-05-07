@@ -2,6 +2,9 @@
 .DS_Store
 .idea/
 *.iml
+/.gradle/
+/.kotlin/
+/build/
 
 # Secrets
 .env
@@ -11,8 +14,11 @@
 # Frontend build/deps
 frontend/node_modules/
 frontend/.angular/
+frontend/build/
 frontend/dist/
 frontend/.git.backup/
+/.gradle-home/
+frontend/.gradle/
 
 # Backend local build/cache
 backend/.gradle/
