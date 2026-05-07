@@ -28,7 +28,7 @@
             "styles": [
               "src/styles.css"
             ],
-            "outputPath": "build/install"
+            "outputPath": "build/angular"
           },
           "configurations": {
             "production": {
