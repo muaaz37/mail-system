@@ -4,9 +4,11 @@ plugins {
     kotlin("plugin.spring") version "2.2.20"
     id("org.springframework.boot") version "4.0.1"
     id("io.spring.dependency-management") version "1.1.7"
+    id("dev.detekt") version "2.0.0-alpha.1"
     application
 }
 apply(plugin = "java")
+apply(plugin = "dev.detekt")
 application {
 // Note: the main class in Kotlin has a "Kt" suffix when compiled,
 // so we need to specify it here for the application plugin to work correctly
@@ -49,6 +51,7 @@ kotlin {
         freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
     }
 }
+
 
 tasks.withType<Test> {
     useJUnitPlatform()
