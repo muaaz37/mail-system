@@ -7,8 +7,8 @@ plugins {
     id("dev.detekt") version "2.0.0-alpha.1"
     application
 }
+
 apply(plugin = "java")
-apply(plugin = "dev.detekt")
 application {
 // Note: the main class in Kotlin has a "Kt" suffix when compiled,
 // so we need to specify it here for the application plugin to work correctly
@@ -52,21 +52,36 @@ kotlin {
     }
 }
 
+detekt {
+    // Version of detekt that will be used. When unspecified the latest detekt
+    // version found will be used. Override to stay on the same version.
+    toolVersion = "2.0.0-alpha.1"
+
+    // The directories where detekt looks for source files.
+    // Defaults to `files("src/main/java", "src/test/java", "src/main/kotlin", "src/test/kotlin")`.
+   source.setFrom("src/main/java", "src/main/kotlin")
+
+    // Define the detekt configuration(s) you want to use.
+    // Defaults to the default detekt configuration.
+   // config.setFrom("path/to/config.yml")
+
+    // Specifying a baseline file. All findings stored in this file in subsequent runs of detekt.
+    // baseline = file("$projectDir/detekt-baseline.xml")
+
+    // Adds debug output during task execution. `false` by default.
+    // debug = false
+
+    // Specify the base path for file paths in the formatted reports.
+    // If not set, all file paths reported will be absolute file path.
+    basePath.set(projectDir)
+}
 
 tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-tasks.register("helloTask"){
-    group="hello"
-    description="A simple hello world task"
-    dependsOn(tasks.test)
-
-    doFirst {
-        println("Executed first during the execution phase")
-    }
-
-    doLast{
-        println("Executed last after the execution phase")
-    }
+tasks.register("lint") {
+    group = "verification"
+    description = "Runs static code quality checks for the backend."
+    dependsOn("detekt")
 }
