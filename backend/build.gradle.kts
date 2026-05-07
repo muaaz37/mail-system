@@ -6,7 +6,6 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     application
 }
-apply(plugin = "idea")
 apply(plugin = "java")
 application {
 // Note: the main class in Kotlin has a "Kt" suffix when compiled,
@@ -59,7 +58,6 @@ tasks.register("helloTask"){
     group="hello"
     description="A simple hello world task"
     dependsOn(tasks.test)
-    println("Executed during the configuration phase")
 
     doFirst {
         println("Executed first during the execution phase")
