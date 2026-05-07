@@ -61,16 +61,6 @@ detekt {
     // Defaults to `files("src/main/java", "src/test/java", "src/main/kotlin", "src/test/kotlin")`.
    source.setFrom("src/main/java", "src/main/kotlin")
 
-    // Define the detekt configuration(s) you want to use.
-    // Defaults to the default detekt configuration.
-   // config.setFrom("path/to/config.yml")
-
-    // Specifying a baseline file. All findings stored in this file in subsequent runs of detekt.
-    // baseline = file("$projectDir/detekt-baseline.xml")
-
-    // Adds debug output during task execution. `false` by default.
-    // debug = false
-
     // Specify the base path for file paths in the formatted reports.
     // If not set, all file paths reported will be absolute file path.
     basePath.set(projectDir)
@@ -80,7 +70,7 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-tasks.register("lint") {
+tasks.register("lintBackend") {
     group = "verification"
     description = "Runs static code quality checks for the backend."
     dependsOn("detekt")
