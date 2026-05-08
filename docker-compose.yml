@@ -23,8 +23,6 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
       FILE_UPLOAD_DIR: /app/uploads
-    ports:
-      - "8080:8080"
     volumes:
       - backend_uploads:/app/uploads
 
