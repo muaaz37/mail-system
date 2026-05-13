@@ -30,3 +30,5 @@ backend/.idea/
 # Runtime uploads
 uploads/
 backend/uploads/
+
+docs/
