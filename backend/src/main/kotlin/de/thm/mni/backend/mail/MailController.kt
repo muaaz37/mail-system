@@ -25,7 +25,7 @@ class MailController(private val mailService: MailService,
                      private val userService: UserService,
                      private val mailRecordService: MailRecordService,
                      private val mailMapper: MailMapper
-    ) {
+) {
 
     @GetMapping("/drafts")
     fun getCreatedMails(@AuthenticationPrincipal user: UserDetails): List<MailDTO> {
