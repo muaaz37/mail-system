@@ -1,8 +1,13 @@
 package de.thm.mni.backend.imap
 
+import jakarta.mail.Flags
 import jakarta.mail.Folder
+import jakarta.mail.Message
+import jakarta.mail.Multipart
+import jakarta.mail.Part
 import jakarta.mail.Session
 import jakarta.mail.Store
+import jakarta.mail.search.FlagTerm
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
@@ -20,7 +25,7 @@ class IMAPService(
 
     @Scheduled(fixedDelayString = "\${mail.polling.interval-ms}")
     fun fetchIncomingMails() {
-        println("IMAP: connecting to $host:$port")
+        println("IMAP: checking unread mails...")
 
         val properties = Properties().apply {
             put("mail.store.protocol", protocol)
@@ -40,15 +45,61 @@ class IMAPService(
             inbox = store.getFolder(folderName)
             inbox.open(Folder.READ_WRITE)
 
-            println("IMAP: connected successfully")
-            println("IMAP: total mails = ${inbox.messageCount}")
-            println("IMAP: unread mails = ${inbox.unreadMessageCount}")
+            val unreadMessages = inbox.search(
+                FlagTerm(Flags(Flags.Flag.SEEN), false)
+            )
+
+            println("IMAP: unread mails found = ${unreadMessages.size}")
+
+            unreadMessages.take(5).forEach { message ->
+                println("----- UNREAD MAIL -----")
+                println("Subject: ${message.subject}")
+                println("From: ${message.from?.joinToString()}")
+                println("Sent date: ${message.sentDate}")
+                println("Message-ID: ${message.getHeader("Message-ID")?.firstOrNull()}")
+                println("Body: ${extractBody(message)?.take(500)}")
+            }
 
         } catch (e: Exception) {
             println("IMAP ERROR: ${e.message}")
         } finally {
             inbox?.close(false)
             store?.close()
+        }
+    }
+
+    private fun extractBody(part: Part): String? {
+        return when {
+            part.isMimeType("text/plain") -> {
+                if (Part.ATTACHMENT.equals(part.disposition, ignoreCase = true)) null
+                else part.content as? String
+            }
+
+            part.isMimeType("text/html") -> {
+                if (Part.ATTACHMENT.equals(part.disposition, ignoreCase = true)) null
+                else part.content as? String
+            }
+
+            part.isMimeType("multipart/*") -> {
+                val multipart = part.content as Multipart
+
+                for (i in 0 until multipart.count) {
+                    val bodyPart = multipart.getBodyPart(i)
+
+                    if (Part.ATTACHMENT.equals(bodyPart.disposition, ignoreCase = true)) {
+                        continue
+                    }
+
+                    val body = extractBody(bodyPart)
+                    if (!body.isNullOrBlank()) {
+                        return body
+                    }
+                }
+
+                null
+            }
+
+            else -> null
         }
     }
 }
