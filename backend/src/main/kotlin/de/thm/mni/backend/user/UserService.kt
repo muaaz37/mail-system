@@ -23,9 +23,28 @@ class UserService(private val userRepository: UserRepository){
         return userRepository.findUserByEmail(email)
     }
 
+    fun findByEmail(email: String): User? {
+        return userRepository.findByEmail(email)
+    }
 
     fun getAllUsers(): List<User> {
         return userRepository.findAll().toList()
+    }
+
+    fun createExternalUser(email: String): User {
+        val existingUser = userRepository.findByEmail(email)
+        if (existingUser != null) {
+            return existingUser
+        }
+
+        val externalUser = User(
+            firstName = "External",
+            lastName = "Sender",
+            email = email,
+            password = ""
+        )
+
+        return userRepository.save(externalUser)
     }
 
     fun updateUser(id: UUID, updatedUser: User): User {
@@ -35,5 +54,4 @@ class UserService(private val userRepository: UserRepository){
     fun deleteUser(id: UUID) {
         userRepository.deleteById(id)
     }
-
 }

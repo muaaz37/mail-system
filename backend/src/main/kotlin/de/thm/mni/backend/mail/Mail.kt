@@ -32,10 +32,10 @@ class Mail {
     @JoinColumn(name = "user_id", nullable = false)
     var sender: User? = null
 
-    @Column
+    @Column(length = 1000)
     var subject: String = ""
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     var content: String = ""
 
     @Column
@@ -54,6 +54,9 @@ class Mail {
 
     @Column(name = "sent_at")
     var sentAt: LocalDateTime? = null
+
+    @Column(name = "incoming_message_id", unique = true)
+    var incomingMessageId: String? = null
 
     constructor()
 

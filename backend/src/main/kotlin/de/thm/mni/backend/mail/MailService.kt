@@ -149,4 +149,44 @@ class MailService(
         ))}
     }
 
+
+    @Transactional
+    fun createIncomingMailFromImap(
+        senderEmail: String,
+        subject: String,
+        content: String,
+        messageId: String?
+    ): Mail? {
+        if (messageId != null && mailRepository.existsByIncomingMessageId(messageId)) {
+            return null
+        }
+
+        val sender = userService.findByEmail(senderEmail)
+            ?: userService.createExternalUser(senderEmail)
+
+        val mailEntity = Mail(
+            sender = sender,
+            subject = subject,
+            content = content,
+            attachments = mutableListOf()
+        )
+
+        mailEntity.status = MailStatus.SENT
+        mailEntity.incomingMessageId = messageId
+
+        val savedMail = mailRepository.save(mailEntity)
+
+        userService.getAllUsers().forEach { user ->
+            mailRecordService.createMailRecord(
+                CreateMailRecord(
+                    mail = savedMail,
+                    receiver = user,
+                    mailType = MailType.TO
+                )
+            )
+        }
+
+        return savedMail
+    }
+
 }

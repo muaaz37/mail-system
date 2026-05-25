@@ -12,9 +12,11 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.util.Properties
+import de.thm.mni.backend.mail.MailService
 
 @Service
 class IMAPService(
+    private val mailService: MailService,
     @Value("\${mail.imap.host}") private val host: String,
     @Value("\${mail.imap.port}") private val port: Int,
     @Value("\${mail.imap.username}") private val username: String,
@@ -58,6 +60,31 @@ class IMAPService(
                 println("Sent date: ${message.sentDate}")
                 println("Message-ID: ${message.getHeader("Message-ID")?.firstOrNull()}")
                 println("Body: ${extractBody(message)?.take(500)}")
+
+                val senderEmail = message.from
+                    ?.firstOrNull()
+                    ?.toString()
+                    ?.substringAfter("<")
+                    ?.substringBefore(">")
+                    ?: "unknown@example.com"
+
+                val subject = message.subject ?: "(No Subject)"
+                val body = extractBody(message) ?: ""
+                val messageId = message.getHeader("Message-ID")?.firstOrNull()
+
+                val savedMail = mailService.createIncomingMailFromImap(
+                    senderEmail = senderEmail,
+                    subject = subject,
+                    content = body,
+                    messageId = messageId
+                )
+
+                if (savedMail != null) {
+                    println("IMAP: mail saved to database: ${savedMail.id}")
+                } else {
+                    println("IMAP: mail already exists, skipped")
+                }
+
             }
 
         } catch (e: Exception) {
