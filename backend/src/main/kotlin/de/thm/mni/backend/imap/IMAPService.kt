@@ -81,6 +81,8 @@ class IMAPService(
 
                 if (savedMail != null) {
                     println("IMAP: mail saved to database: ${savedMail.id}")
+
+                    message.setFlag(Flags.Flag.SEEN, true)
                 } else {
                     println("IMAP: mail already exists, skipped")
                 }
