@@ -16,7 +16,7 @@ import java.util.UUID
 @Table(name = "attachments")
 class Attachment {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(    strategy = GenerationType.UUID)
     var id : UUID? = null
 
     @Column(name = "file_name")

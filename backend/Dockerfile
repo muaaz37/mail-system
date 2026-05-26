@@ -9,8 +9,8 @@ COPY build/install/backend/ /app/
 RUN chmod +x /app/bin/backend \
 && addgroup --system backend \
 && adduser --system --ingroup backend --no-create-home backend \
+&& mkdir -p /app/uploads \
 && chown -R backend:backend /app
-
 # Create Linux user backend
 USER backend
 

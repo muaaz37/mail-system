@@ -1,22 +1,21 @@
 package de.thm.mni.backend.imap
 
+import de.thm.mni.backend.attachment.dto.AttachmentDTO
+import de.thm.mni.backend.mail.MailService
+import de.thm.mni.backend.storage.FileStorageService
 import jakarta.mail.Flags
-import jakarta.mail.Folder
-import jakarta.mail.Message
 import jakarta.mail.Multipart
 import jakarta.mail.Part
-import jakarta.mail.Session
-import jakarta.mail.Store
 import jakarta.mail.search.FlagTerm
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.util.Properties
-import de.thm.mni.backend.mail.MailService
 
 @Service
 class IMAPService(
     private val mailService: MailService,
+    private val fileStorageService: FileStorageService,
     @Value("\${mail.imap.host}") private val host: String,
     @Value("\${mail.imap.port}") private val port: Int,
     @Value("\${mail.imap.username}") private val username: String,
@@ -36,30 +35,23 @@ class IMAPService(
             put("mail.$protocol.ssl.enable", "true")
         }
 
-        var store: Store? = null
-        var inbox: Folder? = null
+        var store: jakarta.mail.Store? = null
+        var inbox: jakarta.mail.Folder? = null
 
         try {
-            val session = Session.getInstance(properties)
+            val session = jakarta.mail.Session.getInstance(properties)
             store = session.getStore(protocol)
             store.connect(host, port, username, password)
 
             inbox = store.getFolder(folderName)
-            inbox.open(Folder.READ_WRITE)
+            inbox.open(jakarta.mail.Folder.READ_WRITE)
 
-            val unreadMessages = inbox.search(
-                FlagTerm(Flags(Flags.Flag.SEEN), false)
-            )
-
+            val unreadMessages = inbox.search(FlagTerm(Flags(Flags.Flag.SEEN), false))
             println("IMAP: unread mails found = ${unreadMessages.size}")
 
             unreadMessages.take(5).forEach { message ->
-                println("----- UNREAD MAIL -----")
-                println("Subject: ${message.subject}")
-                println("From: ${message.from?.joinToString()}")
-                println("Sent date: ${message.sentDate}")
-                println("Message-ID: ${message.getHeader("Message-ID")?.firstOrNull()}")
-                println("Body: ${extractBody(message)?.take(500)}")
+                val body = extractBody(message) ?: ""
+                val attachments = extractAttachments(message)
 
                 val senderEmail = message.from
                     ?.firstOrNull()
@@ -68,25 +60,22 @@ class IMAPService(
                     ?.substringBefore(">")
                     ?: "unknown@example.com"
 
-                val subject = message.subject ?: "(No Subject)"
-                val body = extractBody(message) ?: ""
-                val messageId = message.getHeader("Message-ID")?.firstOrNull()
-
                 val savedMail = mailService.createIncomingMailFromImap(
                     senderEmail = senderEmail,
-                    subject = subject,
+                    subject = message.subject ?: "(No Subject)",
                     content = body,
-                    messageId = messageId
+                    messageId = message.getHeader("Message-ID")?.firstOrNull(),
+                    attachments = attachments
                 )
 
                 if (savedMail != null) {
                     println("IMAP: mail saved to database: ${savedMail.id}")
-
+                    println("IMAP: attachments saved = ${attachments.size}")
                     message.setFlag(Flags.Flag.SEEN, true)
+                    println("IMAP: mail marked as read")
                 } else {
                     println("IMAP: mail already exists, skipped")
                 }
-
             }
 
         } catch (e: Exception) {
@@ -130,5 +119,33 @@ class IMAPService(
 
             else -> null
         }
+    }
+
+    private fun extractAttachments(part: Part): MutableList<AttachmentDTO> {
+        val attachments = mutableListOf<AttachmentDTO>()
+
+        if (part.isMimeType("multipart/*")) {
+            val multipart = part.content as Multipart
+
+            for (i in 0 until multipart.count) {
+                val bodyPart = multipart.getBodyPart(i)
+
+                if (Part.ATTACHMENT.equals(bodyPart.disposition, ignoreCase = true)) {
+                    val fileName = bodyPart.fileName ?: "attachment"
+                    val savedAttachment = fileStorageService.saveFileFromInputStream(
+                        inputStream = bodyPart.inputStream,
+                        originalFilename = fileName,
+                        mimeType = bodyPart.contentType,
+                        size = bodyPart.size.toLong()
+                    )
+
+                    attachments.add(savedAttachment)
+                } else {
+                    attachments.addAll(extractAttachments(bodyPart))
+                }
+            }
+        }
+
+        return attachments
     }
 }

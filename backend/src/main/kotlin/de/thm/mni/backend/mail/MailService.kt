@@ -155,7 +155,8 @@ class MailService(
         senderEmail: String,
         subject: String,
         content: String,
-        messageId: String?
+        messageId: String?,
+        attachments: MutableList<AttachmentDTO>
     ): Mail? {
         if (messageId != null && mailRepository.existsByIncomingMessageId(messageId)) {
             return null
@@ -170,6 +171,15 @@ class MailService(
             content = content,
             attachments = mutableListOf()
         )
+
+        attachments.forEach { att ->
+            val attachment = Attachment()
+            attachment.fileName = att.fileName
+            attachment.mimeType = att.mimeType
+            attachment.size = att.size
+            attachment.path = att.path
+            mailEntity.addAttachment(attachment)
+        }
 
         mailEntity.status = MailStatus.SENT
         mailEntity.incomingMessageId = messageId

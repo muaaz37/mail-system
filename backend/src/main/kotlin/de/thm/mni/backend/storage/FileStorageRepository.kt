@@ -14,6 +14,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.util.UUID
+import java.io.InputStream
 
 
 @Repository
@@ -39,7 +40,11 @@ class FileStorageRepository(@Value("\${file.upload-dir}") private val uploadDir:
 
             val originalFilename = file.originalFilename
 
-            val extension = originalFilename!!.substring(originalFilename.lastIndexOf("."))
+            val extension = if (originalFilename != null && originalFilename.contains(".")) {
+                originalFilename.substring(originalFilename.lastIndexOf("."))
+            } else {
+                ""
+            }
             val newFilename = UUID.randomUUID().toString() + extension
 
             val destinationFile: Path? = this.rootLocation?.resolve(Paths.get(newFilename))
@@ -81,6 +86,40 @@ class FileStorageRepository(@Value("\${file.upload-dir}") private val uploadDir:
             }
         } catch (e: MalformedURLException) {
             throw RuntimeException("Error: " + e.message)
+        }
+    }
+
+
+    fun saveFileFromInputStream(
+        inputStream: InputStream,
+        originalFilename: String,
+        mimeType: String?,
+        size: Long
+    ): AttachmentDTO {
+        try {
+            val extension = if (originalFilename.contains(".")) {
+                originalFilename.substring(originalFilename.lastIndexOf("."))
+            } else {
+                ""
+            }
+
+            val newFilename = UUID.randomUUID().toString() + extension
+
+            val destinationFile: Path? = this.rootLocation
+                ?.resolve(Paths.get(newFilename))
+                ?.normalize()
+                ?.toAbsolutePath()
+
+            Files.copy(inputStream, destinationFile, StandardCopyOption.REPLACE_EXISTING)
+
+            return AttachmentDTO(
+                size = size,
+                fileName = originalFilename,
+                mimeType = mimeType,
+                path = newFilename
+            )
+        } catch (e: IOException) {
+            throw RuntimeException("Failed to store IMAP attachment.", e)
         }
     }
 }
