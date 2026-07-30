@@ -3,11 +3,13 @@ package de.thm.mni.backend.error
 import de.thm.mni.backend.storage.FileStorageException
 import de.thm.mni.backend.storage.FileStorageObjectNotFoundException
 import org.slf4j.LoggerFactory
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.multipart.MaxUploadSizeExceededException
 import org.springframework.web.multipart.MultipartException
 
@@ -78,10 +80,20 @@ class ErrorHandler {
     /**
      * Handles business-rule violations that should be corrected by the request.
      */
-    @ExceptionHandler(ResourceCannotBeModifiedException::class, InvalidMailRequestException::class)
+    @ExceptionHandler(
+        ResourceCannotBeModifiedException::class,
+        InvalidMailRequestException::class,
+        MethodArgumentTypeMismatchException::class,
+        HttpMessageNotReadableException::class
+    )
     fun handleBadRequestException(err: Exception): ResponseEntity<AppError> {
         log.warn("Bad request: {}", err.message)
-        val error = AppError(HttpStatus.BAD_REQUEST.value(), err.message)
+        val message = when (err) {
+            is MethodArgumentTypeMismatchException -> INVALID_PATH_PARAMETER_MESSAGE
+            is HttpMessageNotReadableException -> INVALID_REQUEST_BODY_MESSAGE
+            else -> err.message
+        }
+        val error = AppError(HttpStatus.BAD_REQUEST.value(), message)
         return ResponseEntity<AppError>(error, HttpStatus.BAD_REQUEST)
     }
 
@@ -140,6 +152,8 @@ class ErrorHandler {
 
     private companion object {
         const val MAIL_SEND_FAILED_MESSAGE = "Mail could not be sent. The draft was kept for retry."
+        const val INVALID_PATH_PARAMETER_MESSAGE = "Invalid request path."
+        const val INVALID_REQUEST_BODY_MESSAGE = "Invalid request body."
         const val ATTACHMENT_TOO_LARGE_MESSAGE = "Attachment is too large. Maximum file size is 10 MB."
         const val ATTACHMENT_UPLOAD_FAILED_MESSAGE = "Attachment upload could not be processed."
         const val ATTACHMENT_STORAGE_FAILED_MESSAGE = "Attachment storage is currently unavailable."
