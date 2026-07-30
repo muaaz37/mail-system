@@ -23,4 +23,8 @@
 
 	redir / /app/ 308
 	redir /app /app/ 308
+
+	handle {
+		redir /app/404 308
+	}
 }
