@@ -1,1 +1,14 @@
-<app-mail-form [mailData]="mail()" [title]="'Edit mail'"></app-mail-form>
+<p-toast />
+
+@if (isLoading()) {
+  <div class="flex justify-center items-center h-96">
+    <p-progress-spinner strokeWidth="4" />
+  </div>
+} @else if (mail()) {
+  <app-mail-form [mailData]="mail()" [title]="'Edit draft'"></app-mail-form>
+} @else {
+  <div class="flex flex-col items-center justify-center h-96 text-gray-400">
+    <i class="pi pi-envelope-slash text-6xl mb-4"></i>
+    <p class="text-xl">Draft could not be loaded</p>
+  </div>
+}

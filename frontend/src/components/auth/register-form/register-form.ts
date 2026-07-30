@@ -1,29 +1,27 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { ToastModule } from 'primeng/toast';
-import { FloatLabelModule } from 'primeng/floatlabel';
 import { MessageService } from 'primeng/api';
 import { AuthService } from '../../../services/auth/auth-service';
-import {Router, RouterLink} from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { readApiErrorMessage } from '../../../utils/api-error-message';
 
 @Component({
   selector: 'app-register-form',
   imports: [
     MessageModule,
     ToastModule,
-    ButtonModule,
     InputTextModule,
     ReactiveFormsModule,
-    FloatLabelModule,
     RouterLink,
   ],
   providers: [MessageService],
   templateUrl: './register-form.html',
+  styleUrl: './register-form.css',
 })
-export class RegisterForm {
+export class RegisterForm implements OnInit {
   protected registerForm = new FormGroup({
     firstName: new FormControl('', [Validators.required]),
     lastName: new FormControl('', [Validators.required]),
@@ -37,7 +35,13 @@ export class RegisterForm {
 
   protected formSubmitted = signal(false);
 
-  async onSubmit() {
+  ngOnInit() {
+    this.authService.clearSession();
+  }
+
+  onSubmit() {
+    this.formSubmitted.set(true);
+
     if (this.registerForm.valid) {
       this.authService
         .register({
@@ -49,8 +53,7 @@ export class RegisterForm {
         .subscribe({
           next: (res) => {
             if ('token' in res) {
-              localStorage.setItem('token', res.token);
-              localStorage.setItem('user', JSON.stringify(res.user));
+              this.authService.storeSession(res);
               this.router.navigate(['mails']);
             }
           },
@@ -58,7 +61,7 @@ export class RegisterForm {
             this.messageService.add({
               severity: 'error',
               summary: 'Registration Failed',
-              detail: err.error.message,
+              detail: readApiErrorMessage(err, 'Registration failed.'),
             });
           },
         });

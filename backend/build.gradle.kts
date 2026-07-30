@@ -10,8 +10,7 @@ plugins {
 
 apply(plugin = "java")
 application {
-// Note: the main class in Kotlin has a "Kt" suffix when compiled,
-// so we need to specify it here for the application plugin to work correctly
+    // Kotlin top-level main functions are compiled with a Kt suffix.
     mainClass = "de.thm.mni.backend.BackendApplicationKt"
 }
 group = "de.thm.mni"
@@ -29,10 +28,13 @@ repositories {
 }
 
 dependencies {
-    // Zur kompilieren und zur Laufzeit da
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.22.0")
+    implementation(platform("software.amazon.awssdk:bom:2.25.60"))
+    implementation("software.amazon.awssdk:s3")
 
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
@@ -43,6 +45,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("org.springframework.boot:spring-boot-starter-web")
+
+    implementation("org.springframework.boot:spring-boot-starter-integration")
+    implementation("org.springframework.integration:spring-integration-mail")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+
 
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("com.h2database:h2")

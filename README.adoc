@@ -1,0 +1,450 @@
+= Mail System
+:toc:
+:toclevels: 3
+:sectanchors:
+:source-highlighter: rouge
+
+Mail System is a full-stack web application for internal mail handling and shared support-mailbox integration.
+It provides authenticated users with inbox, sent-mail, draft, compose, mail-detail and attachment workflows, while the backend integrates with a configured SMTP/IMAP mailbox for outgoing and incoming support messages.
+
+The repository contains an Angular frontend, a Kotlin/Spring Boot backend and a Docker Compose runtime with PostgreSQL.
+
+== System Overview
+
+The system is designed as a split frontend/backend application:
+
+* Angular single-page application served by Caddy in Docker.
+* Kotlin/Spring Boot REST API for authentication, users, mails, recipients, attachments and mailbox integration.
+* PostgreSQL database for Docker-based operation.
+* H2 fallback database for direct local backend startup.
+* SeaweedFS/S3-compatible object storage for uploaded and imported attachments.
+* SMTP integration for sending mails through the configured support mailbox.
+* IMAP polling for importing unread support-mailbox messages.
+
+== Features
+
+[cols="1,3",options="header"]
+|===
+| Area | Implemented behavior
+
+| Authentication
+| Users can register, log in, receive a JWT and access protected frontend routes and backend API endpoints.
+
+| Mail folders
+| Authenticated users can view incoming mails, sent mails and drafts.
+
+| Mail composition
+| Users can create drafts, edit drafts, send existing drafts and create-and-send mails in one flow. Each mail uses one explicit delivery mode: `INTERNAL` for registered application users or `EXTERNAL` for SMTP delivery through the configured THM mailbox.
+
+| Recipients
+| Internal mails use registered users as `TO`, `CC`, `BCC` and `REPLY_TO` recipients. External mails use manually entered email addresses for the same recipient categories. The backend rejects mixed internal/external recipient requests and prevents internal self-sending.
+
+| Attachments
+| Files can be uploaded, associated with mails, downloaded through the API and removed from storage when the mail is deleted.
+
+| Shared support mailbox
+| External incoming support mails sent to the configured THM address are imported once and are visible to all registered application users. External outgoing answers are sent through the same configured SMTP account. Internal messages remain inside the application and are not sent via SMTP.
+
+| IMAP import
+| Imported messages are stored as `RECEIVED`, keep external sender metadata, persist attachments, skip duplicate `Message-ID` values and are marked as read after successful handling. App-generated SMTP messages are marked with an origin header and ignored during IMAP import, which prevents duplicate inbox entries when SMTP and IMAP use the same THM mailbox.
+
+| Ticket replies
+| When a user replies to an imported support mail, the application presents a generated ticket number and prepends it to the outgoing reply subject if no ticket code already exists.
+
+| Frontend integration
+| The frontend renders internal senders and external IMAP senders consistently in inbox and mail-detail views, and provides a reply action for imported support mails.
+
+| Local container runtime
+| Docker Compose starts frontend, backend, PostgreSQL and SeaweedFS with persistent Docker volumes for database state and attachment objects.
+|===
+
+== Scope
+
+The current project scope is mail management with shared support-mailbox import/export. Incoming support mails are treated as shared tickets for all registered users. Full ticket workflow management is outside the scope, but reply subjects include generated ticket numbers so support conversations can be tracked.
+
+The Docker Compose setup is intended for local evaluation and development.
+A public production deployment should provide production-grade secret management, TLS termination and operational monitoring.
+
+== Architecture
+
+At runtime, users access the Angular application through a browser.
+Caddy serves the compiled frontend and reverse-proxies `/api/*` requests to the backend.
+The backend owns business logic, persistence, security, attachment storage and SMTP/IMAP communication.
+
+[source,text]
+
+=== Backend Components
+
+[cols="1,3",options="header"]
+|===
+| Component | Responsibility
+
+| `AuthController`, `SecurityConfig`, `AuthFilter`, `JwtService`
+| Registration, login, password hashing, JWT creation and request authentication.
+
+| `UserController`, `UserService`, `UserRepository`
+| User listing, lookup and profile updates.
+
+| `MailController`, `MailAccessService`, `MailService`, `MailImportService`, `SupportReplyService`, `SupportTicketService`, `MailRecipientValidator`, `MailAttachmentHandler`, `MailRepository`, `MailMapper`
+| Mail creation, draft handling, internal/external delivery separation, shared support-mail retrieval, support reply templates, ticket-prefix handling, authorization checks, recipient validation, attachment handling and DTO mapping.
+
+| `MailRecordService`, `MailRecordRepository`
+| Recipient relationships and recipient type handling.
+
+| `FileStorageService`, `AttachmentStorage`, `S3AttachmentStorage`, `StorageController`
+| S3-compatible attachment persistence and attachment download endpoints.
+
+| `SMTPService`
+| Outgoing mail delivery through the configured support mailbox.
+
+| `IMAPService`, `ImapMessageMapper`, `MailPollingScheduler`
+| Scheduled unread-message import from the configured mailbox.
+
+| `ImapDiagnosticsController`
+| Authenticated mailbox diagnostics for unread count, previews and manual import execution.
+|===
+
+=== Frontend Structure
+
+[cols="1,3",options="header"]
+|===
+| Area | Responsibility
+
+| `src/app/app.routes.ts`
+| Route definitions and protected mail area routing.
+
+| `src/layouts/root-layout/`
+| Authenticated shell layout with navigation.
+
+| `src/pages/`
+| Page-level components for login, registration, inbox, sent mails, drafts, compose, support replies, edit, details and not-found handling.
+
+| `src/components/`
+| Reusable form, list, navigation and authentication components.
+
+| `src/services/`
+| HTTP services, authentication guard and API access.
+
+| `src/types/`
+| Shared TypeScript data contracts for frontend API usage.
+
+| `src/utils/`
+| Presentation helpers for sender labels and status badges.
+|===
+
+== Repository Layout
+
+[source,text]
+----
+mail-system/
+|-- backend/                 Kotlin/Spring Boot backend
+|   |-- src/main/kotlin/      application source code
+|   |-- src/main/resources/   application configuration and seed data
+|   |-- build.gradle.kts      backend build configuration
+|   `-- Dockerfile            backend runtime image
+|
+|-- frontend/                Angular frontend
+|   |-- src/                  pages, components, services, routes and types
+|   |-- public/               static frontend assets
+|   |-- proxy.conf.json       Angular dev-server proxy for /api to localhost:8080
+|   |-- package.json          npm scripts and dependencies
+|   |-- build.gradle.kts      Gradle integration for frontend tasks
+|   |-- Caddyfile             frontend server and API reverse proxy
+|   `-- Dockerfile            frontend build and Caddy image
+|
+|-- docker-compose.yml       local container orchestration
+|-- build.gradle.kts         root Gradle orchestration
+|-- settings.gradle.kts      Gradle module declaration
+|-- .env.example             environment template without real credentials
+|-- LICENSE                  project license
+`-- README.adoc              project documentation
+----
+
+== Technology Stack
+
+[cols="1,3",options="header"]
+|===
+| Layer | Technology
+
+| Frontend
+| Angular 21, TypeScript, PrimeNG, PrimeIcons, Tailwind CSS
+
+| Backend
+| Kotlin 2.2, Java 21, Spring Boot 4, Spring Security, Spring Data JPA, Spring Validation
+
+| Persistence
+| PostgreSQL for Docker Compose, H2 as direct-start fallback
+
+| Mail
+| Spring Boot Mail, JavaMail, Spring Integration Mail, SMTP, IMAP
+
+| Build
+| Gradle Kotlin DSL, Gradle wrapper, Node Gradle plugin, npm
+
+| Runtime
+| Docker Compose, Caddy, Eclipse Temurin Java runtime
+
+| Quality
+| detekt for Kotlin and angular-eslint for Angular/TypeScript
+|===
+
+== Prerequisites
+
+Install the following tools for local operation and development:
+
+* Java 21
+* Docker and Docker Compose
+* Node.js and npm when working directly in `frontend/`
+* A compatible SMTP/IMAP mailbox when testing real mail integration
+
+The Gradle wrapper downloads the configured Gradle version automatically.
+The Gradle-driven frontend build downloads the configured Node/npm versions through the Node Gradle plugin.
+
+== Configuration
+
+The Docker setup reads environment values from a root `.env` file.
+Create it from the template and replace placeholder credentials before running the system:
+
+[source,bash]
+----
+cp .env.example .env
+----
+
+Do not commit `.env` or any other file containing real credentials.
+Only `.env.example` belongs in version control.
+
+Required values for Docker Compose:
+
+[source,env]
+----
+DB_USER=postgres
+DB_PASSWORD=replace_with_local_db_password
+DB_NAME=mail_system
+
+MAIL_CLIENT_HOST_PORT=8081
+SERVER_PORT=8080
+APP_NAME=mail-system
+APP_SECRET=replace_with_local_app_secret
+APP_JWT_EXPIRES_SECONDS=3600
+APP_JWT_SECRET=replace_with_local_jwt_secret
+
+STORAGE_S3_ENDPOINT=http://seaweedfs:8333
+STORAGE_S3_REGION=us-east-1
+STORAGE_S3_BUCKET=mail-attachments
+STORAGE_S3_ACCESS_KEY=replace_with_s3_access_key
+STORAGE_S3_SECRET_KEY=replace_with_s3_secret_key
+STORAGE_S3_PATH_STYLE_ACCESS=true
+STORAGE_S3_INITIALIZE_BUCKET=true
+
+MAIL_SMTP_HOST=mail.example.org
+MAIL_SMTP_PORT=465
+MAIL_SMTP_USERNAME=mailbox-user
+MAIL_SMTP_PASSWORD=replace_with_mailbox_password
+MAIL_SMTP_AUTH=true
+MAIL_SMTP_PROTOCOL=smtp
+MAIL_SMTP_STARTTLS_ENABLE=false
+MAIL_SMTP_SSL_ENABLE=true
+
+MAIL_IMAP_HOST=mail.example.org
+MAIL_IMAP_PORT=993
+MAIL_IMAP_USERNAME=mailbox-user
+MAIL_IMAP_PASSWORD=replace_with_mailbox_password
+MAIL_IMAP_PROTOCOL=imaps
+MAIL_IMAP_FOLDER=INBOX
+
+MAIL_POLLING_INTERVAL_MS=60000
+SUPPORT_MAIL_ADDRESS=support@example.org
+----
+
+For direct backend development without Docker, the backend starts with H2 defaults unless Spring datasource variables are exported explicitly:
+
+[source,env]
+----
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/mail_system
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=replace_with_local_db_password
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+SPRING_JPA_HIBERNATE_DDL_AUTO=update
+----
+
+== Run With Docker
+
+Build and start the complete stack:
+
+[source,bash]
+----
+docker compose up --build
+----
+
+Open the application at:
+
+* Frontend through Caddy: http://localhost:8081/app/
+* Backend API through Caddy only: http://localhost:8081/api
+
+Stop the system:
+
+[source,bash]
+----
+docker compose down
+----
+
+Remove containers and persisted Docker volumes:
+
+[source,bash]
+----
+docker compose down -v
+----
+
+== Run For Development
+
+=== Backend
+
+Start the backend from the repository root with the Gradle wrapper.
+If mail credentials are stored in `.env`, export them before starting the process:
+
+[source,bash]
+----
+set -a
+source .env
+set +a
+./gradlew :backend:bootRun
+----
+
+The backend listens on http://localhost:8080.
+
+=== Frontend
+
+Start the Angular development server from the frontend module:
+
+[source,bash]
+----
+cd frontend
+npm install
+npm run start
+----
+
+The frontend development server listens on http://localhost:4200.
+It uses `frontend/proxy.conf.json` so browser requests to `/api/*` are forwarded to the backend on http://localhost:8080.
+This mirrors the Docker setup, where Caddy performs the same `/api/*` reverse proxying.
+
+If the backend URL changes, update `frontend/proxy.conf.json` and restart `npm run start`.
+
+== Build And Checks
+
+Build the complete project:
+
+[source,bash]
+----
+./gradlew build
+----
+
+Create installable distributions:
+
+[source,bash]
+----
+./gradlew installDist
+----
+
+Run the configured checks:
+
+[source,bash]
+----
+./gradlew check
+----
+
+Run the combined static-code-quality task:
+
+[source,bash]
+----
+./gradlew lint
+----
+
+Useful module-specific commands:
+
+[source,bash]
+----
+./gradlew :backend:test
+./gradlew :backend:detekt
+./gradlew :frontend:build
+
+cd frontend
+npm run lint
+npm run test -- --watch=false
+npm run build
+----
+
+== Seed Data
+
+The backend imports seed users from `backend/src/main/resources/data.json` for local evaluation.
+These accounts are sample data and must not be used as real credentials.
+
+[cols="1,2,2,3,2",options="header"]
+|===
+| # | First name | Last name | Email | Password
+
+| 1 | Ameline | Allanson | `aallanson@example.com` | `123456`
+| 2 | Sanson | Vardey | `svardey1@example.com` | `123456`
+| 3 | Jami | Poe | `jpoe@example.uk` | `123456`
+| 4 | Trent | Ianno | `tianno3@example.com` | `123456`
+| 5 | Alikee | Raisbeck | `araisbeck4@example.com` | `123456`
+|===
+
+== Operational Notes
+
+=== Authentication
+
+The backend issues JWTs after successful login.
+The frontend stores the token locally and adds it to API requests with an HTTP interceptor.
+
+=== Attachments
+
+Attachments are stored in SeaweedFS through its S3-compatible API.
+The database stores attachment metadata and the object key used by the backend for download, delete and outgoing SMTP attachment loading.
+In Docker, SeaweedFS persists objects in the `seaweedfs_data` volume.
+
+=== Mail Sending
+
+Internal mails are delivered inside the application only. They are visible to registered recipients through the local database and are not sent through SMTP.
+
+External mails are sent through the configured SMTP account. The sender address is controlled by `SUPPORT_MAIL_ADDRESS`, which normally points to the same THM mailbox used for IMAP polling. Outgoing external messages include `X-Mail-System-Origin: mail-system` so the IMAP importer can identify and ignore copies generated by this application. Replies to imported support mails receive a `TICKET-000000` style ticket number in the subject when no ticket code exists yet.
+
+=== Mail Receiving
+
+IMAP polling is enabled in the backend application.
+The scheduler uses `mail.polling.interval-ms` / `MAIL_POLLING_INTERVAL_MS` and imports unread messages through the same import flow used by diagnostics.
+Imported messages are persisted as `RECEIVED`, duplicate `Message-ID` values are skipped, attachments are stored through the existing attachment storage, app-generated SMTP copies are skipped through the application origin header, and only successfully handled messages are marked as read on the IMAP server. Imported support mails are visible to all registered users.
+
+Authenticated IMAP diagnostics are available under `/api/imap/diagnostics` for unread count, previews and manual import execution.
+
+== Troubleshooting
+
+=== Docker reports missing environment values
+
+Check that `.env` exists in the repository root and contains all values listed in `.env.example`.
+
+=== Backend image cannot find `/app/bin/backend`
+
+Rebuild the Docker image from the repository root. The backend Dockerfile runs the Gradle Wrapper inside a multi-stage build; no manual local `installDist` step is required:
+
+[source,bash]
+----
+docker compose up --build
+----
+
+=== Frontend cannot reach the API during development
+
+For Docker, access the application through http://localhost:8081 so Caddy can proxy `/api/*` to the backend.
+For separate development servers, make sure the backend is reachable on http://localhost:8080 and restart `npm run start` so Angular loads `proxy.conf.json`.
+
+=== Database state should be reset
+
+Remove Docker volumes:
+
+[source,bash]
+----
+docker compose down -v
+----
+
+== License
+
+This project is licensed under the link:LICENSE[MIT License].

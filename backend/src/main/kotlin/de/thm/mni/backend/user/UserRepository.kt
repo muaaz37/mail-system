@@ -5,6 +5,9 @@ import org.springframework.stereotype.Repository
 import java.util.UUID
 
 
+/**
+ * Provides database access for user accounts.
+ */
 @Repository
 interface UserRepository: CrudRepository<User, UUID> {
     fun existsUserByEmail(email: String): Boolean

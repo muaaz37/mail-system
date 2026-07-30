@@ -1,8 +1,12 @@
-<div class="w-full min-h-screen flex p-4 gap-3">
-  <div class="w-64 bg-white border border-gray-200 rounded-2xl">
+<div class="workspace-shell">
+  <div class="workspace-glow workspace-glow-left"></div>
+  <div class="workspace-glow workspace-glow-right"></div>
+
+  <aside class="workspace-sidebar">
     <app-side-navigation></app-side-navigation>
-  </div>
-  <div class="flex-1 bg-white">
+  </aside>
+
+  <main class="workspace-main">
     <router-outlet />
-  </div>
+  </main>
 </div>

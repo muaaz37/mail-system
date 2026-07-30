@@ -2,6 +2,9 @@ package de.thm.mni.backend.util.dto
 
 import de.thm.mni.backend.mail.enums.MailStatus
 
+/**
+ * Seed-data model for one initial mail and its recipient email addresses.
+ */
 data class CreateSeedMail(
     val senderEmail: String,
     val subject: String,

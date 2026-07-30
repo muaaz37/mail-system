@@ -1,0 +1,230 @@
+.tickets-page {
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+}
+
+.tickets-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.6rem;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 1.6rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.84)),
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.18), transparent 24rem);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+}
+
+.tickets-eyebrow {
+  margin: 0 0 0.35rem;
+  color: #0f766e;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.tickets-hero h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(1.9rem, 3vw, 3rem);
+  font-weight: 880;
+  letter-spacing: -0.06em;
+}
+
+.tickets-hero p:not(.tickets-eyebrow) {
+  max-width: 40rem;
+  margin: 0.45rem 0 0;
+  color: #64748b;
+  font-weight: 620;
+}
+
+.tickets-hero-metric {
+  min-width: 8rem;
+  padding: 1rem;
+  border-radius: 1.2rem;
+  color: #ffffff;
+  align-self: flex-start;
+  background: linear-gradient(135deg, #0f172a, #0f766e);
+}
+
+.tickets-hero-metric strong,
+.tickets-hero-metric span {
+  display: block;
+}
+
+.tickets-hero-metric strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.tickets-hero-metric span {
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tickets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.ticket-card {
+  padding: 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.88);
+  border-radius: 1.35rem;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+
+.ticket-card-unread {
+  border-color: rgba(15, 118, 110, 0.42);
+  background:
+    linear-gradient(90deg, rgba(20, 184, 166, 0.08), transparent 22rem),
+    rgba(255, 255, 255, 0.94);
+}
+
+.ticket-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(20, 184, 166, 0.38);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.1);
+}
+
+.ticket-card:focus-visible {
+  outline: 3px solid rgba(20, 184, 166, 0.28);
+  outline-offset: 3px;
+}
+
+.ticket-card-top,
+.ticket-footer,
+.ticket-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.ticket-card-top {
+  justify-content: space-between;
+}
+
+.ticket-identifiers {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.ticket-number {
+  color: #92400e;
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.unread-chip {
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  color: #115e59;
+  background: #ccfbf1;
+  font-size: 0.68rem;
+  font-weight: 880;
+  letter-spacing: 0.02em;
+}
+
+.ticket-date {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.ticket-card h3 {
+  margin: 0.65rem 0 0;
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 850;
+  letter-spacing: -0.035em;
+}
+
+.ticket-requester {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-weight: 650;
+}
+
+.ticket-requester span {
+  margin-right: 0.3rem;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ticket-meta {
+  margin-top: 0.8rem;
+}
+
+.ticket-footer {
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.82);
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.tickets-loading,
+.tickets-empty {
+  display: grid;
+  place-items: center;
+  min-height: 22rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.78);
+  border-radius: 1.4rem;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.78);
+  text-align: center;
+}
+
+.tickets-empty div {
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 1rem;
+  border-radius: 1.3rem;
+  display: grid;
+  place-items: center;
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.1);
+  font-size: 1.7rem;
+}
+
+.tickets-empty h3 {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 850;
+}
+
+.tickets-empty p {
+  margin: 0.35rem 0 0;
+  font-weight: 650;
+}
+
+@media (max-width: 680px) {
+  .tickets-hero {
+    flex-direction: column;
+  }
+}

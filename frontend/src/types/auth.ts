@@ -1,18 +1,18 @@
-import {User} from './user';
+import { User } from './user';
 
-export type LoginRequest = {
+export interface LoginRequest {
   email: string;
   password: string;
 }
 
-export type RegisterRequest = {
+export interface RegisterRequest {
   firstName: string;
   lastName: string;
   email: string;
   password: string;
 }
 
-export type AuthResponse = {
+export interface AuthResponse {
   user: User;
   token: string;
 }

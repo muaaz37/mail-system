@@ -1,9 +1,10 @@
-import {Component, inject, signal} from '@angular/core';
+import {Component, inject, OnInit, signal} from '@angular/core';
 import {MailsService} from '../../../services/mails/mails-service';
 import {MessageService} from 'primeng/api';
 import {Mail} from '../../../types/mails';
 import {MailsList} from '../../../components/mails/mails-list/mails-list';
 import {Toast} from 'primeng/toast';
+import { readApiErrorMessage } from '../../../utils/api-error-message';
 
 @Component({
   selector: 'app-mail-sent',
@@ -14,7 +15,7 @@ import {Toast} from 'primeng/toast';
   templateUrl: './mail-sent.html',
   styleUrl: './mail-sent.css',
 })
-export class MailSent {
+export class MailSent implements OnInit {
   private mailsService = inject(MailsService);
   private messageService = inject(MessageService);
 
@@ -36,7 +37,7 @@ export class MailSent {
         this.messageService.add({
           severity: 'error',
           summary: 'Failed to Load Mails',
-          detail: err.error?.message || 'An error occurred',
+          detail: readApiErrorMessage(err),
         });
         this.isLoading.set(false);
       },

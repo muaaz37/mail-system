@@ -6,5 +6,6 @@ import {RouterOutlet} from '@angular/router';
   selector: 'app-home-page',
   imports: [ SideNavigation, RouterOutlet],
   templateUrl: './root-layout.html',
+  styleUrl: './root-layout.css',
 })
 export class RootLayout {}

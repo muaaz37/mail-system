@@ -1,34 +1,47 @@
-# OS / Editor
+# macOS / OS metadata
 .DS_Store
+
+# IDE / editor metadata
 .idea/
 *.iml
-/.gradle/
-/.kotlin/
-/build/
+.vscode/
 
-# Secrets
+# Secrets and local environment files
 .env
 .env.*
 !.env.example
 
-# Frontend build/deps
-frontend/node_modules/
-frontend/.angular/
-frontend/build/
-frontend/dist/
-frontend/.git.backup/
-/.gradle-home/
-frontend/.gradle/
+# Gradle / Kotlin local state
+.gradle/
+.gradle-home/
+.kotlin/
+build/
 
-# Backend local build/cache
+# Backend build/cache/runtime files
 backend/.gradle/
 backend/.gradle-user/
 backend/.kotlin/
-backend/build/
 backend/.idea/
+backend/build/
+backend/uploads/
+
+# Frontend dependencies/build/cache files
+frontend/node_modules/
+frontend/.angular/
+frontend/.gradle/
+frontend/build/
+frontend/dist/
+frontend/.git.backup/
 
 # Runtime uploads
 uploads/
-backend/uploads/
 
+# Local project notes / non-submission artifacts
 docs/
+loesung.md
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.swp

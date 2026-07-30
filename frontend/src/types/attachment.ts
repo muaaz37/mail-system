@@ -1,8 +1,11 @@
-export type Attachment = {
+import { SafeResourceUrl } from '@angular/platform-browser';
+
+export interface Attachment {
   size: number;
   fileName: string;
   mimeType: string;
   path: string;
-  url: string;
-  blob: Blob;
-};
+  url?: string;
+  safeUrl?: SafeResourceUrl;
+  blob?: Blob;
+}

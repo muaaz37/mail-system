@@ -1,0 +1,72 @@
+<p-toast />
+<div class="tickets-page">
+  <section class="tickets-hero">
+    <div>
+      <p class="tickets-eyebrow">Shared mailbox</p>
+      <h2>{{ title }}</h2>
+      <p>{{ description }}</p>
+    </div>
+    <div class="tickets-hero-metric">
+      <strong>{{ isLoading() ? '-' : tickets().length }}</strong>
+      <span>{{ metricLabel }}</span>
+    </div>
+  </section>
+
+  @if (isLoading()) {
+    <div class="tickets-loading">
+      <p-progress-spinner strokeWidth="4" />
+    </div>
+  } @else if (tickets().length) {
+    <div class="tickets-grid">
+      @for (ticket of tickets(); track ticket.id) {
+        <article
+          class="ticket-card"
+          [class.ticket-card-unread]="ticket.hasUnreadActivity"
+          role="button"
+          tabindex="0"
+          (click)="openTicket(ticket)"
+          (keydown.enter)="openTicket(ticket)"
+          (keydown.space)="openTicket(ticket)"
+        >
+          <div class="ticket-card-top">
+            <div class="ticket-identifiers">
+              <span class="ticket-number">{{ ticket.ticketNumber }}</span>
+              @if (ticket.hasUnreadActivity) {
+                <span class="unread-chip">New activity</span>
+              }
+            </div>
+            <span class="ticket-date">{{ formatDate(ticket.lastActivityAt) }}</span>
+          </div>
+
+          <h3>{{ ticket.subject }}</h3>
+          <p class="ticket-requester">
+            <span>From</span>
+            {{ requester(ticket) }}
+          </p>
+
+          <div class="ticket-meta">
+            <p-tag [value]="statusLabel(ticket.status)" [severity]="statusSeverity(ticket.status)" />
+            <p-tag [value]="priorityLabel(ticket.priority)" [severity]="prioritySeverity(ticket.priority)" />
+          </div>
+
+          <div class="ticket-footer">
+            <span>
+              <i class="pi pi-comments"></i>
+              {{ ticket.mailCount }} message{{ ticket.mailCount === 1 ? '' : 's' }}
+            </span>
+            <span>
+              <i class="pi pi-user"></i>
+              {{ assigneeLabel(ticket) }}
+            </span>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="tickets-empty">
+      <div><i class="pi pi-check-circle"></i></div>
+      <h3>No tickets here</h3>
+      <p>There is no ticket in this view.</p>
+    </div>
+  }
+</div>

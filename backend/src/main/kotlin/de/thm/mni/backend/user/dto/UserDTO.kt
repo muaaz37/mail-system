@@ -3,6 +3,9 @@ package de.thm.mni.backend.user.dto
 import de.thm.mni.backend.user.User
 import java.util.UUID
 
+/**
+ * API response model for user data without password information.
+ */
 data class UserDTO(
     val id: UUID?,
     val firstName: String,
@@ -11,6 +14,9 @@ data class UserDTO(
 )
 
 
+/**
+ * Converts a user entity to a public response DTO.
+ */
 fun User.toDTO() = UserDTO(
     id = this.id,
     firstName = this.firstName,

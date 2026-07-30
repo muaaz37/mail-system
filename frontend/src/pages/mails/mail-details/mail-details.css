@@ -12,3 +12,125 @@
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-in;
 }
+
+.mail-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mail-toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.support-reply-button {
+  border: 0;
+  min-height: 3rem;
+  padding: 0.45rem 1rem 0.45rem 0.55rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  cursor: pointer;
+  color: #0f172a;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.16)),
+    linear-gradient(135deg, #dbeafe 0%, #ccfbf1 52%, #fef3c7 100%);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12), inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    filter 160ms ease;
+}
+
+.support-reply-button:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.05);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16), inset 0 0 0 1px rgba(15, 23, 42, 0.11);
+}
+
+.support-reply-button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 3px;
+}
+
+.ticket-link-button {
+  border: 0;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: #0f172a;
+  background: #e2e8f0;
+  font-weight: 820;
+  transition:
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.ticket-link-button:hover {
+  transform: translateY(-1px);
+  background: #cbd5e1;
+}
+
+.support-reply-icon {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: #0f172a;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+}
+
+.support-reply-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.05;
+}
+
+.support-reply-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.support-reply-hint {
+  margin-top: 0.22rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 640px) {
+  .mail-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mail-toolbar-actions,
+  .support-reply-button {
+    width: 100%;
+  }
+
+  .mail-toolbar-actions {
+    justify-content: flex-start;
+  }
+
+  .support-reply-button {
+    justify-content: flex-start;
+  }
+}

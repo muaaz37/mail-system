@@ -4,43 +4,92 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: unless-stopped
+    environment:
+      SERVER_PORT: ${SERVER_PORT:-8080}
     ports:
-      - "8081:80"
+      - "${MAIL_CLIENT_HOST_PORT:-8081}:80"
     depends_on:
       - mail-server
 
   mail-server:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     restart: unless-stopped
     depends_on:
       database:
         condition: service_healthy
+      seaweedfs:
+        condition: service_started
+    expose:
+      - "${SERVER_PORT:-8080}"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/${DB_NAME}
-      SPRING_DATASOURCE_USERNAME: ${DB_USER}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:-10MB}
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:-25MB}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/${DB_NAME:-mail_system}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
-      FILE_UPLOAD_DIR: /app/uploads
-    volumes:
-      - backend_uploads:/app/uploads
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT:-http://seaweedfs:8333}
+      STORAGE_S3_REGION: ${STORAGE_S3_REGION:-us-east-1}
+      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-mail-attachments}
+      STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY:?STORAGE_S3_ACCESS_KEY must be set}
+      STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY:?STORAGE_S3_SECRET_KEY must be set}
+      STORAGE_S3_PATH_STYLE_ACCESS: ${STORAGE_S3_PATH_STYLE_ACCESS:-true}
+      STORAGE_S3_INITIALIZE_BUCKET: ${STORAGE_S3_INITIALIZE_BUCKET:-true}
+      APP_NAME: ${APP_NAME:-mail-system}
+      APP_SECRET: ${APP_SECRET:?APP_SECRET must be set}
+      APP_JWT_EXPIRES_SECONDS: ${APP_JWT_EXPIRES_SECONDS:-3600}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:?APP_JWT_SECRET must be set}
+      MAIL_SMTP_HOST: ${MAIL_SMTP_HOST:?MAIL_SMTP_HOST must be set}
+      MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-465}
+      MAIL_SMTP_USERNAME: "${MAIL_SMTP_USERNAME:-}"
+      MAIL_SMTP_PASSWORD: "${MAIL_SMTP_PASSWORD:-}"
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-true}
+      MAIL_SMTP_PROTOCOL: ${MAIL_SMTP_PROTOCOL:-smtp}
+      MAIL_SMTP_STARTTLS_ENABLE: ${MAIL_SMTP_STARTTLS_ENABLE:-false}
+      MAIL_SMTP_SSL_ENABLE: ${MAIL_SMTP_SSL_ENABLE:-true}
+
+      MAIL_IMAP_HOST: ${MAIL_IMAP_HOST:?MAIL_IMAP_HOST must be set}
+      MAIL_IMAP_PORT: ${MAIL_IMAP_PORT:-993}
+      MAIL_IMAP_USERNAME: "${MAIL_IMAP_USERNAME:-}"
+      MAIL_IMAP_PASSWORD: "${MAIL_IMAP_PASSWORD:-}"
+      MAIL_IMAP_PROTOCOL: ${MAIL_IMAP_PROTOCOL:-imaps}
+      MAIL_IMAP_FOLDER: ${MAIL_IMAP_FOLDER:-INBOX}
+
+      MAIL_POLLING_INTERVAL_MS: ${MAIL_POLLING_INTERVAL_MS:-60000}
+      SUPPORT_MAIL_ADDRESS: ${SUPPORT_MAIL_ADDRESS:?SUPPORT_MAIL_ADDRESS must be set}
 
   database:
     image: postgres:16
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      POSTGRES_DB: ${DB_NAME:-mail_system}
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-mail_system}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.38
+    restart: unless-stopped
+    command: "server -s3 -dir=/data"
+    environment:
+      AWS_ACCESS_KEY_ID: ${STORAGE_S3_ACCESS_KEY:?STORAGE_S3_ACCESS_KEY must be set}
+      AWS_SECRET_ACCESS_KEY: ${STORAGE_S3_SECRET_KEY:?STORAGE_S3_SECRET_KEY must be set}
+      S3_BUCKET: ${STORAGE_S3_BUCKET:-mail-attachments}
+    expose:
+      - "8333"
+    volumes:
+      - seaweedfs_data:/data
+
 volumes:
   db_data:
-  backend_uploads:
+  seaweedfs_data:

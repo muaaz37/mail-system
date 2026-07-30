@@ -9,6 +9,9 @@ import com.auth0.jwt.interfaces.DecodedJWT
 import java.util.Date
 
 
+/**
+ * Creates and validates JWT tokens used by the stateless backend API.
+ */
 @Service
 class JwtService(
     @Value("\${app.jwt.secret}") private val secret: String,
@@ -17,6 +20,9 @@ class JwtService(
 )
 {
 
+    /**
+     * Creates a signed JWT for the given user identifier.
+     */
     fun createToken(subject: String): String {
         val now = Instant.now()
         val exp = now.plusSeconds(expiresSeconds)
@@ -35,5 +41,8 @@ class JwtService(
         .withIssuer(appName)
         .build()
 
+    /**
+     * Verifies a token signature, issuer and expiration date.
+     */
     fun validate(token: String): DecodedJWT = verifier.verify(token)
 }

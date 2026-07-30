@@ -6,9 +6,7 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
 
-
-object JwtAuthenticationFactory{
-
+object JwtAuthenticationFactory {
     fun create(request: HttpServletRequest, jwtService: JwtService): Authentication? {
         val token = request.getHeader("Authorization")
             ?.takeIf { it.startsWith("Bearer ") }
@@ -20,12 +18,11 @@ object JwtAuthenticationFactory{
         val userDetails = User.builder()
             .username(jwt.subject)
             .password("")
-            .roles( "USER")
+            .roles("USER")
             .build()
 
         return UsernamePasswordAuthenticationToken(userDetails, null, userDetails.authorities).apply {
             details = WebAuthenticationDetailsSource().buildDetails(request)
         }
     }
-
 }

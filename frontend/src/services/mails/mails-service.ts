@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { API_BASE_URL } from '../../constants';
-import { CreateMail, Mail, UpdateMail } from '../../types/mails';
+import { CreateMail, Mail, MailReplyTemplate, UpdateMail } from '../../types/mails';
 import { User } from '../../types/user';
 
 @Injectable({
@@ -26,8 +26,12 @@ export class MailsService {
     return this.http.get<Mail>(`${API_BASE_URL}/mails/${id}`);
   }
 
+  public getReplyTemplate(id: string) {
+    return this.http.get<MailReplyTemplate>(`${API_BASE_URL}/mails/${id}/reply-template`);
+  }
+
   public sendMail(id: string) {
-    return this.http.post(`${API_BASE_URL}/mails/send/${id}`, {});
+    return this.http.post<void>(`${API_BASE_URL}/mails/send/${id}`, {});
   }
 
   public deleteMail(id: string) {
