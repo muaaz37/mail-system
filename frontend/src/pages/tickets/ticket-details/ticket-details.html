@@ -1,0 +1,113 @@
+<p-toast />
+<div class="ticket-detail-page">
+  <button type="button" class="back-button" (click)="goBack()">
+    <i class="pi pi-arrow-left"></i>
+    Back
+  </button>
+
+  @if (isLoading()) {
+    <div class="ticket-detail-loading">
+      <p-progress-spinner strokeWidth="4" />
+    </div>
+  } @else if (detail() && ticket()) {
+    <section class="ticket-detail-hero">
+      <div>
+        <p class="ticket-eyebrow">{{ ticket()!.ticketNumber }}</p>
+        <h1>{{ ticket()!.subject }}</h1>
+        <p class="ticket-requester">
+          {{ ticket()!.requesterName || 'External sender' }}
+          @if (ticket()!.requesterEmail) {
+            <span>&lt;{{ ticket()!.requesterEmail }}&gt;</span>
+          }
+        </p>
+      </div>
+      <div class="ticket-state-panel">
+        <p-tag [value]="statusLabel(ticket()!.status)" [severity]="statusSeverity(ticket()!.status)" />
+        <span class="priority-chip">{{ ticket()!.priority.toLowerCase() }} priority</span>
+        <span class="assignee-chip">
+          <i class="pi pi-user"></i>
+          {{ ticket()!.assignedTo ? ticket()!.assignedTo!.firstName : 'Unassigned' }}
+        </span>
+      </div>
+    </section>
+
+    <section class="ticket-actions">
+      @if (canReply()) {
+        <button type="button" class="primary-action" (click)="replyToSender()">
+          <i class="pi pi-reply"></i>
+          Reply to sender
+        </button>
+      }
+      @if (!ticket()!.assignedTo) {
+        <button type="button" class="secondary-action" (click)="assignToMe()">
+          <i class="pi pi-user-plus"></i>
+          Assign to me
+        </button>
+      } @else {
+        <button type="button" class="secondary-action" (click)="unassign()">
+          <i class="pi pi-user-minus"></i>
+          Unassign
+        </button>
+      }
+      @if (ticket()!.status === SupportTicketStatus.RESOLVED) {
+        <button type="button" class="secondary-action" (click)="reopen()">
+          <i class="pi pi-refresh"></i>
+          Reopen ticket
+        </button>
+      } @else {
+        <button type="button" class="resolve-action" (click)="resolve()">
+          <i class="pi pi-check-circle"></i>
+          Resolve ticket
+        </button>
+      }
+    </section>
+
+    <section class="priority-actions">
+        <span>Priority</span>
+      @for (priority of priorities; track priority) {
+        <button
+          type="button"
+          [class.active]="ticket()!.priority === priority"
+          (click)="updatePriority(priority)"
+        >
+          {{ priority.toLowerCase() }}
+        </button>
+      }
+    </section>
+
+    <section class="conversation-panel">
+      <div class="conversation-header">
+        <h2>Conversation</h2>
+        <span>{{ detail()!.mails.length }} message{{ detail()!.mails.length === 1 ? '' : 's' }}</span>
+      </div>
+
+      <div class="timeline">
+        @for (mail of detail()!.mails; track mail.id) {
+          <article class="timeline-item" [class.support-message]="mail.sender">
+            <div class="timeline-dot"></div>
+            <div class="timeline-card">
+              <div class="timeline-card-top">
+                <div>
+                  <strong>{{ senderLabel(mail) }}</strong>
+                  <span>{{ senderContext(mail) }}</span>
+                </div>
+                <time>{{ formatDate(mail.createdAt) }}</time>
+              </div>
+              <h3>{{ mail.subject }}</h3>
+              <p class="timeline-preview">{{ messagePreview(mail) }}</p>
+              <div class="timeline-footer">
+                @if (mail.attachments.length) {
+                  <span>
+                    <i class="pi pi-paperclip"></i>
+                    {{ mail.attachments.length }} attachment{{ mail.attachments.length === 1 ? '' : 's' }}
+                  </span>
+                }
+                <button type="button" (click)="openMail(mail)">Open mail</button>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+  }
+</div>

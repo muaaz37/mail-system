@@ -3,6 +3,9 @@ package de.thm.mni.backend.auth.dto
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.Size
 
+/**
+ * Login request payload with email and password credentials.
+ */
 data class LoginRequest(
     @field:Email(message = "Email should be valid")
     val email: String,

@@ -3,6 +3,9 @@ package de.thm.mni.backend.user.dto
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.Size
 
+/**
+ * Request payload for updating a user's public profile data.
+ */
 data class UserUpdate(
     @field:Size(min = 1, message = "First name must not be empty")
     val firstName: String,

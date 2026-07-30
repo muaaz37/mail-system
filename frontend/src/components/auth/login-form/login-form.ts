@@ -1,29 +1,27 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { AuthService } from '../../../services/auth/auth-service';
-import { FloatLabelModule } from 'primeng/floatlabel';
-import {Router, RouterLink} from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { readApiErrorMessage } from '../../../utils/api-error-message';
 
 @Component({
   selector: 'app-login-form',
   imports: [
     MessageModule,
     ToastModule,
-    ButtonModule,
     InputTextModule,
     ReactiveFormsModule,
-    FloatLabelModule,
     RouterLink,
   ],
   providers: [MessageService],
   templateUrl: './login-form.html',
+  styleUrl: './login-form.css',
 })
-export class LoginForm {
+export class LoginForm implements OnInit {
   protected loginForm = new FormGroup({
     email: new FormControl('', [Validators.email, Validators.required]),
     password: new FormControl('', [Validators.minLength(6), Validators.required]),
@@ -35,7 +33,13 @@ export class LoginForm {
 
   protected formSubmitted = signal(false);
 
-  async onSubmit() {
+  ngOnInit() {
+    this.authService.clearSession();
+  }
+
+  onSubmit() {
+    this.formSubmitted.set(true);
+
     if (this.loginForm.valid) {
       this.authService
         .login({
@@ -45,8 +49,7 @@ export class LoginForm {
         .subscribe({
           next: (res) => {
             if ('token' in res) {
-              localStorage.setItem('token', res.token);
-              localStorage.setItem('user', JSON.stringify(res.user));
+              this.authService.storeSession(res);
               this.router.navigate(['mails']);
             }
           },
@@ -54,7 +57,7 @@ export class LoginForm {
             this.messageService.add({
               severity: 'error',
               summary: 'Login Failed',
-              detail: err.error.message,
+              detail: readApiErrorMessage(err, 'Login failed.'),
             });
           },
         });

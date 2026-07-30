@@ -9,6 +9,9 @@ import jakarta.persistence.Table
 import java.util.UUID
 
 
+/**
+ * Persistent user account with login credentials and profile data.
+ */
 @Entity
 @Table(name = "users")
 class User {

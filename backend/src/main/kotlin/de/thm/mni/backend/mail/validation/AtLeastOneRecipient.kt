@@ -5,6 +5,9 @@ import jakarta.validation.Payload
 import kotlin.reflect.KClass
 
 
+/**
+ * Ensures that a mail request contains at least one direct recipient.
+ */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 @Constraint(validatedBy = [AtLeastOneRecipientValidator::class])

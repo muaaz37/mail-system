@@ -1,0 +1,11 @@
+node_modules
+build
+dist
+.angular
+.git
+.gitignore
+.git.backup
+*.log
+*.tmp
+*.temp
+.DS_Store

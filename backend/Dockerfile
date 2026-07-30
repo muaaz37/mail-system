@@ -1,20 +1,29 @@
-FROM eclipse-temurin:21-alpine-3.23
+FROM eclipse-temurin:21-jdk-alpine AS builder
+
+WORKDIR /workspace
+
+COPY gradlew settings.gradle.kts build.gradle.kts ./
+COPY gradle ./gradle
+COPY backend/build.gradle.kts ./backend/build.gradle.kts
+COPY frontend/build.gradle.kts ./frontend/build.gradle.kts
+COPY backend/src ./backend/src
+
+RUN --mount=type=cache,target=/root/.gradle \
+    chmod +x ./gradlew && ./gradlew :backend:installDist --no-daemon
+
+FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-# Copy the Server distribution in app
-COPY build/install/backend/ /app/
+COPY --from=builder /workspace/backend/build/install/backend/ /app/
 
-# Make the start script (gradle script) executable (ownership stays root, which is fine)
 RUN chmod +x /app/bin/backend \
-&& addgroup --system backend \
-&& adduser --system --ingroup backend --no-create-home backend \
-&& chown -R backend:backend /app
+    && addgroup --system backend \
+    && adduser --system --ingroup backend --no-create-home backend \
+    && chown -R backend:backend /app
 
-# Create Linux user backend
 USER backend
 
 EXPOSE 8080
 
-# Execute the backend script
-ENTRYPOINT ["/app/bin/backend"]
+CMD ["/app/bin/backend"]

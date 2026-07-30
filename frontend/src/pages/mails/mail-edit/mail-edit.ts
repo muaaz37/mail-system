@@ -1,18 +1,20 @@
-import {Component, inject, Input, OnInit, signal} from '@angular/core';
-import {MailForm} from '../../../components/mails/mail-form/mail-form';
-import {MailsService} from '../../../services/mails/mails-service';
-import {MessageService} from 'primeng/api';
-import {Mail} from '../../../types/mails';
+import { CommonModule } from '@angular/common';
+import { Component, inject, Input, OnInit, signal } from '@angular/core';
+import { MessageService } from 'primeng/api';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { Toast } from 'primeng/toast';
+import { forkJoin, map } from 'rxjs';
+import { MailForm } from '../../../components/mails/mail-form/mail-form';
+import { MailsService } from '../../../services/mails/mails-service';
+import { Mail } from '../../../types/mails';
+import { readApiErrorMessage } from '../../../utils/api-error-message';
 
 @Component({
   selector: 'app-mail-edit',
-  imports: [
-    MailForm,
-  ],
+  imports: [CommonModule, MailForm, ProgressSpinnerModule, Toast],
   templateUrl: './mail-edit.html',
 })
-export class MailEdit implements OnInit{
-
+export class MailEdit implements OnInit {
   @Input() protected id!: string;
 
   private mailsService = inject(MailsService);
@@ -20,7 +22,6 @@ export class MailEdit implements OnInit{
 
   protected mail = signal<Mail | null>(null);
   protected isLoading = signal(true);
-  protected attachments = signal<string[]>([]);
 
   ngOnInit() {
     this.loadMail(this.id);
@@ -30,33 +31,45 @@ export class MailEdit implements OnInit{
     this.isLoading.set(true);
     this.mailsService.getMailById(id).subscribe({
       next: (mail) => {
-        mail.attachments.forEach(attachment=>{
-          this.mailsService.fetchAttachment(attachment.path).subscribe({
-            next: (blob) => {
+        if (!mail.attachments.length) {
+          this.mail.set(mail);
+          this.isLoading.set(false);
+          return;
+        }
+
+        const attachmentLoads = mail.attachments.map((attachment) =>
+          this.mailsService.fetchAttachment(attachment.path).pipe(
+            map((blob) => {
               attachment.url = URL.createObjectURL(blob);
               attachment.blob = blob;
-            },
-            error: (err) => {
-              this.messageService.add({
-                severity: 'error',
-                summary: 'Failed to Load Attachment',
-                detail: err.error?.message || 'An error occurred',
-              });
-            },
-          });
-        })
-        this.mail.set(mail);
-        this.isLoading.set(false);
+              return attachment;
+            }),
+          ),
+        );
+
+        forkJoin(attachmentLoads).subscribe({
+          next: () => {
+            this.mail.set(mail);
+            this.isLoading.set(false);
+          },
+          error: (err) => {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Failed to Load Attachment',
+              detail: readApiErrorMessage(err),
+            });
+            this.isLoading.set(false);
+          },
+        });
       },
       error: (err) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Failed to Load Mail',
-          detail: err.error?.message || 'An error occurred',
+          detail: readApiErrorMessage(err),
         });
         this.isLoading.set(false);
       },
     });
   }
-
 }

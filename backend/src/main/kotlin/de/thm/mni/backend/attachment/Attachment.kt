@@ -12,6 +12,9 @@ import jakarta.persistence.Table
 import java.util.UUID
 
 
+/**
+ * Persistent metadata for an object-storage attachment linked to a mail.
+ */
 @Entity
 @Table(name = "attachments")
 class Attachment {

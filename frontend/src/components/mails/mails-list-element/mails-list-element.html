@@ -1,44 +1,63 @@
 <div
-  class="group flex items-center px-4 py-2 gap-4 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
+  role="button"
+  tabindex="0"
+  class="mail-card"
+  [class.mail-card-error]="mail.status === 'ERROR'"
+  [class.mail-card-received]="mail.status === 'RECEIVED'"
+  [class.mail-card-draft]="mail.status === 'DRAFT'"
+  [class.mail-card-sent]="mail.status === 'SENT'"
   (click)="navigateToMail()"
+  (keydown.enter)="navigateToMail()"
+  (keydown.space)="navigateToMail($event)"
 >
-  <div class="relative shrink-0">
-    <span
-      class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full z-10"
-    ></span>
-
-    <div
-      class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-semibold text-sm"
-    >
-      {{ mail.sender.firstName.charAt(0) }}{{ mail.sender.lastName.charAt(0) }}
+  <div class="mail-avatar-wrap">
+    <div class="mail-avatar">
+      {{ getMailSenderDisplay(mail).initials }}
     </div>
   </div>
 
-  <div class="w-40 shrink-0">
-    <p class="text-gray-900 font-medium truncate">
-      {{ mail.sender.firstName }} {{ mail.sender.lastName }}
-    </p>
-  </div>
+  <div class="mail-card-main">
+    <div class="mail-card-topline">
+      <div class="mail-card-sender">
+        <span class="sender-name">{{ getMailSenderDisplay(mail).name }}</span>
+        @if (getMailSenderDisplay(mail).email) {
+          <span class="sender-email">{{ getMailSenderDisplay(mail).email }}</span>
+        }
+      </div>
+      <span class="mail-date">{{ formatDate(mail.createdAt) }}</span>
+    </div>
 
-  <div class="flex-1 min-w-0 flex items-baseline gap-4">
-    <span class="text-gray-900 font-medium truncate flex-1">
-      {{ mail.subject }}
-    </span>
-    <span class="text-gray-500 text-sm truncate flex-3">
-      {{ mail.content }}
-    </span>
-  </div>
+    <div class="mail-card-subject-row">
+      @if (mail.ticketNumber) {
+        <span class="ticket-chip">{{ mail.ticketNumber }}</span>
+      }
+      <h3>{{ mail.subject }}</h3>
+    </div>
 
-  <div class="flex items-center gap-4 shrink-0">
-    @if (mail.attachments.length > 0) {
-      <span class="text-gray-500 text-sm truncate ml-3 flex items-center gap-1">
-        <i class="pi pi-file"></i>
-        +{{ mail.attachments.length }} attachment{{ mail.attachments.length > 1 ? 's' : '' }}
+    <p class="mail-preview">{{ getPreview() }}</p>
+
+    <div class="mail-card-meta">
+      <span class="meta-chip">
+        <i class="pi pi-envelope"></i>
+        {{ getConversationType() }}
       </span>
-    }
-    <p-tag [value]="mail.status" [severity]="getSeverityBadge(mail.status)" />
-    <p class="text-sm text-gray-500 min-w-17.5 text-right">
-      {{ formatDate(mail.createdAt) }}
-    </p>
+      @if (mail.ticketAssignedTo) {
+        <span class="meta-chip">
+          <i class="pi pi-user"></i>
+          Assigned to {{ mail.ticketAssignedTo.firstName }}
+        </span>
+      }
+      @if (mail.attachments.length > 0) {
+        <span class="meta-chip">
+          <i class="pi pi-paperclip"></i>
+          {{ mail.attachments.length }} file{{ mail.attachments.length > 1 ? 's' : '' }}
+        </span>
+      }
+      <p-tag [value]="getStatusLabel()" [severity]="getSeverityBadge(getStatusLabel())" />
+    </div>
+  </div>
+
+  <div class="mail-card-open">
+    Open
   </div>
 </div>

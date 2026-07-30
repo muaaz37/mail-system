@@ -3,6 +3,9 @@ package de.thm.mni.backend.auth.dto
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.Size
 
+/**
+ * Registration request payload for creating a new user account.
+ */
 data class RegisterRequest(
     @field:Size(min = 1, message = "First name must not be empty")
     val firstName: String,

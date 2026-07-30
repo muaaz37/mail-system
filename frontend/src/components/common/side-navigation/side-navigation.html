@@ -1,34 +1,52 @@
-<div class="flex flex-col h-full justify-between">
+<div class="support-sidebar">
   <div>
-    <div class="border-b border-gray-200 mb-4 pb-6 flex items-center justify-between p-6">
-      <h1>
-        <span class="text-2xl font-semibold text-gray-800">Mails</span>
-      </h1>
-      <p-button size="small" severity="contrast" icon="pi pi-plus" (click)="createMail()"></p-button>
+    <div class="support-brand">
+      <div class="support-brand-mark">
+        <i class="pi pi-comments"></i>
+      </div>
+      <div>
+        <p class="support-brand-eyebrow">THM Support</p>
+        <h1>Mail Desk</h1>
+      </div>
     </div>
-    <div class="flex flex-col gap-2 px-4">
+
+    <button type="button" class="compose-button" (click)="createMail()">
+      <span class="compose-icon"><i class="pi pi-plus"></i></span>
+      <span>
+        <span class="compose-label">New message</span>
+        <span class="compose-hint">Internal or external mail</span>
+      </span>
+    </button>
+
+    <div class="support-nav">
       @for (item of navigationItems; track item.route) {
         <a
-          class="button flex items-center px-4 py-2 gap-4 rounded-lg transition-colors hover:bg-gray-100"
+          class="support-nav-item"
           [routerLink]="item.route"
-          routerLinkActive="bg-gray-100"
-          [routerLinkActiveOptions]="{exact: true}"
+          routerLinkActive="support-nav-item-active"
+          [routerLinkActiveOptions]="{exact: item.exact}"
         >
-          <i [class]="item.icon"></i>
-          <span class="text-gray-900 font-medium">{{ item.label }}</span>
+          <span class="support-nav-icon"><i [class]="item.icon"></i></span>
+          <span class="support-nav-copy">
+            <span class="support-nav-label">{{ item.label }}</span>
+            <span class="support-nav-description">{{ item.description }}</span>
+          </span>
         </a>
       }
     </div>
   </div>
 
-  <div class="border-t border-gray-200 p-6">
-    <button
-      class="w-full cursor-pointer flex items-center px-4 py-2 gap-4 rounded-lg transition-colors hover:bg-gray-100"
-      (click)="logout()"
-    >
+  <div class="support-sidebar-footer">
+    <div class="mailbox-health">
+      <span class="health-dot"></span>
+      <span>
+        <strong>Mailbox online</strong>
+        <small>IMAP/SMTP configured</small>
+      </span>
+    </div>
+    <button type="button" class="logout-button" (click)="logout()">
       <i class="pi pi-sign-out"></i>
-      <span class="text-gray-900 font-medium">Logout</span>
+      <span>Logout</span>
     </button>
   </div>
-
 </div>
