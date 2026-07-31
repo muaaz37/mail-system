@@ -10,6 +10,7 @@ import de.thm.mni.backend.openapi.DefaultApiErrors
 import de.thm.mni.backend.openapi.BadRequestApiResponse
 import de.thm.mni.backend.openapi.ConflictApiResponse
 import de.thm.mni.backend.openapi.NotFoundApiResponse
+import de.thm.mni.backend.security.CurrentUserService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -18,7 +19,7 @@ import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -37,7 +38,24 @@ import java.util.UUID
 @DefaultApiErrors
 @RestController
 @RequestMapping("/api/users", produces = [MediaType.APPLICATION_JSON_VALUE])
-class UserController(private val userService: UserService) {
+class UserController(
+    private val userService: UserService,
+    private val currentUserService: CurrentUserService
+) {
+    /**
+     * Returns the local profile linked to the authenticated Keycloak identity.
+     */
+    @GetMapping("/me")
+    @Operation(
+        operationId = "getCurrentUser",
+        summary = "Get current user",
+        description = "Returns the local profile linked to the authenticated OpenID Connect identity."
+    )
+    @ApiResponse(responseCode = "200", description = "Current user returned successfully.")
+    fun getCurrentUser(@AuthenticationPrincipal jwt: Jwt): UserDTO {
+        return currentUserService.resolve(jwt).toDTO()
+    }
+
     /**
      * Returns all registered users for internal recipient selection.
      */
@@ -75,16 +93,16 @@ class UserController(private val userService: UserService) {
         @Parameter(description = "Identifier of the authenticated user, returned by login or registration.")
         @PathVariable id: UUID,
         @Valid @RequestBody userData: UserUpdate,
-        @AuthenticationPrincipal userDetails: UserDetails
+        @AuthenticationPrincipal jwt: Jwt
     ): UserDTO? {
-        val existingUser = authorizedUser(id, userDetails)
+        val existingUser = authorizedUser(id, jwt)
         ensureEmailAvailable(userData.email, existingUser.id!!)
 
         val updatedUser = User(
             firstName = userData.firstName,
             lastName = userData.lastName,
             email = userData.email,
-            password = existingUser.password
+            identitySubject = existingUser.identitySubject
         )
 
         return userService.updateUser(id, updatedUser).toDTO()
@@ -101,18 +119,18 @@ class UserController(private val userService: UserService) {
     fun deleteUser(
         @Parameter(description = "Identifier of the authenticated user, returned by login or registration.")
         @PathVariable id: UUID,
-        @AuthenticationPrincipal userDetails: UserDetails
+        @AuthenticationPrincipal jwt: Jwt
     ) {
-        authorizedUser(id, userDetails)
+        authorizedUser(id, jwt)
         userService.deleteUser(id)
     }
 
     /**
      * Loads the requested user only when it belongs to the authenticated principal.
      */
-    private fun authorizedUser(id: UUID, userDetails: UserDetails): User {
+    private fun authorizedUser(id: UUID, jwt: Jwt): User {
         val existingUser = userService.getUserById(id) ?: throw ResourceNotFoundException("User not found")
-        if (existingUser.id.toString() != userDetails.username) {
+        if (existingUser.identitySubject != jwt.subject) {
             throw ResourceNotFoundException("User not found")
         }
         return existingUser

@@ -15,7 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.MediaType
 import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -51,9 +51,9 @@ class SupportTicketController(
     @ApiResponse(responseCode = "200", description = "Support tickets returned successfully.")
     fun getTickets(
         @Parameter(description = "Workflow view used to filter tickets.", example = "open") @RequestParam(defaultValue = "open") view: String,
-        @AuthenticationPrincipal userDetails: UserDetails
+        @AuthenticationPrincipal jwt: Jwt
     ): List<SupportTicketDTO> {
-        val user = mailAccessService.authenticatedUser(userDetails)
+        val user = mailAccessService.authenticatedUser(jwt)
         return ticketLifecycleService.listTickets(view).map { ticket -> ticketMapper.toDTO(ticket, user) }
     }
 
@@ -66,9 +66,9 @@ class SupportTicketController(
     @NotFoundApiResponse
     fun getTicket(
         @PathVariable ticketId: UUID,
-        @AuthenticationPrincipal userDetails: UserDetails
+        @AuthenticationPrincipal jwt: Jwt
     ): SupportTicketDetailDTO {
-        val user = mailAccessService.authenticatedUser(userDetails)
+        val user = mailAccessService.authenticatedUser(jwt)
         val ticket = ticketCommandService.ticketOrNotFound(ticketId)
         val mails = ticket.mails
             .sortedBy { mail -> mail.createdAt }
@@ -87,9 +87,9 @@ class SupportTicketController(
     @NotFoundApiResponse
     fun assignToMe(
         @PathVariable ticketId: UUID,
-        @AuthenticationPrincipal userDetails: UserDetails
+        @AuthenticationPrincipal jwt: Jwt
     ): SupportTicketDTO {
-        val user = mailAccessService.authenticatedUser(userDetails)
+        val user = mailAccessService.authenticatedUser(jwt)
         val ticket = ticketCommandService.assignTo(ticketId, user)
         ticketReadStateService.markRead(ticket, user)
         return ticketMapper.toDTO(ticket, user)
@@ -104,9 +104,9 @@ class SupportTicketController(
     @NotFoundApiResponse
     fun unassign(
         @PathVariable ticketId: UUID,
-        @AuthenticationPrincipal userDetails: UserDetails
+        @AuthenticationPrincipal jwt: Jwt
     ): SupportTicketDTO {
-        val user = mailAccessService.authenticatedUser(userDetails)
+        val user = mailAccessService.authenticatedUser(jwt)
         val ticket = ticketCommandService.unassign(ticketId)
         ticketReadStateService.markRead(ticket, user)
         return ticketMapper.toDTO(ticket, user)
@@ -121,9 +121,9 @@ class SupportTicketController(
     @NotFoundApiResponse
     fun resolve(
         @PathVariable ticketId: UUID,
-        @AuthenticationPrincipal userDetails: UserDetails
+        @AuthenticationPrincipal jwt: Jwt
     ): SupportTicketDTO {
-        val user = mailAccessService.authenticatedUser(userDetails)
+        val user = mailAccessService.authenticatedUser(jwt)
         val ticket = ticketCommandService.resolveTicket(ticketId)
         ticketReadStateService.markRead(ticket, user)
         return ticketMapper.toDTO(ticket, user)
@@ -138,9 +138,9 @@ class SupportTicketController(
     @NotFoundApiResponse
     fun reopen(
         @PathVariable ticketId: UUID,
-        @AuthenticationPrincipal userDetails: UserDetails
+        @AuthenticationPrincipal jwt: Jwt
     ): SupportTicketDTO {
-        val user = mailAccessService.authenticatedUser(userDetails)
+        val user = mailAccessService.authenticatedUser(jwt)
         val ticket = ticketCommandService.reopenTicket(ticketId)
         ticketReadStateService.markRead(ticket, user)
         return ticketMapper.toDTO(ticket, user)
@@ -157,9 +157,9 @@ class SupportTicketController(
     fun updatePriority(
         @PathVariable ticketId: UUID,
         @RequestBody request: UpdateTicketPriorityRequest,
-        @AuthenticationPrincipal userDetails: UserDetails
+        @AuthenticationPrincipal jwt: Jwt
     ): SupportTicketDTO {
-        val user = mailAccessService.authenticatedUser(userDetails)
+        val user = mailAccessService.authenticatedUser(jwt)
         val ticket = ticketCommandService.updatePriority(ticketId, request.priority)
         ticketReadStateService.markRead(ticket, user)
         return ticketMapper.toDTO(ticket, user)

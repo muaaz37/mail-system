@@ -1,12 +1,11 @@
 package de.thm.mni.backend.mail
 
-import de.thm.mni.backend.error.AuthenticatedUserNotFoundException
 import de.thm.mni.backend.error.ResourceNotFoundException
 import de.thm.mni.backend.mail.enums.MailStatus
 import de.thm.mni.backend.mailrecord.MailRecordService
 import de.thm.mni.backend.user.User
-import de.thm.mni.backend.user.UserService
-import org.springframework.security.core.userdetails.UserDetails
+import de.thm.mni.backend.security.CurrentUserService
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -15,18 +14,14 @@ import java.util.UUID
  */
 @Service
 class MailAccessService(
-    private val userService: UserService,
     private val mailService: MailService,
-    private val mailRecordService: MailRecordService
+    private val mailRecordService: MailRecordService,
+    private val currentUserService: CurrentUserService
 ) {
     /**
-     * Resolves the authenticated Spring Security user to the application user entity.
+     * Resolves the authenticated Keycloak identity to a local profile.
      */
-    fun authenticatedUser(userDetails: UserDetails): User {
-        val userId = UUID.fromString(userDetails.username)
-        return userService.getUserById(userId)
-            ?: throw AuthenticatedUserNotFoundException("Session expired. Please log in again.")
-    }
+    fun authenticatedUser(jwt: Jwt): User = currentUserService.resolve(jwt)
 
     /**
      * Loads a mail or hides missing mails behind a not-found error.

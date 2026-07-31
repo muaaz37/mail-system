@@ -57,4 +57,11 @@ class UserService(private val userRepository: UserRepository) {
     fun deleteUser(id: UUID) {
         userRepository.deleteById(id)
     }
+
+    /**
+     * Loads the local profile linked to an OpenID Connect subject.
+     */
+    fun getUserByIdentitySubject(identitySubject: String): User? {
+        return userRepository.findByIdentitySubject(identitySubject)
+    }
 }
