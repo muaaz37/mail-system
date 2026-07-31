@@ -6,6 +6,10 @@ import de.thm.mni.backend.auth.dto.RegisterRequest
 import de.thm.mni.backend.error.InvalidCredentialsException
 import de.thm.mni.backend.error.ResourceAlreadyExistsException
 import de.thm.mni.backend.security.JwtService
+import de.thm.mni.backend.openapi.DefaultApiErrors
+import de.thm.mni.backend.openapi.BadRequestApiResponse
+import de.thm.mni.backend.openapi.ConflictApiResponse
+import de.thm.mni.backend.openapi.UnauthorizedApiResponse
 import de.thm.mni.backend.user.User
 import de.thm.mni.backend.user.UserService
 import de.thm.mni.backend.user.dto.toDTO
@@ -14,9 +18,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
@@ -25,7 +31,9 @@ import org.springframework.web.bind.annotation.RestController
  * Provides registration and login endpoints for JWT-based authentication.
  */
 @Tag(name = "Auth", description = "Register users and issue JWT bearer tokens.")
+@DefaultApiErrors
 @RestController
+@RequestMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
 class AuthController(
     private val userService: UserService,
     private val passwordEncoder: PasswordEncoder,
@@ -34,6 +42,9 @@ class AuthController(
 
     /**
      * Registers a new user and returns an authentication token.
+     * @param data The registration request containing user details.
+     * @return An AuthResponse containing the registered user and a JWT token.
+     * @throws ResourceAlreadyExistsException if the email is already in use.
      */
     @Operation(
         operationId = "registerUser",
@@ -41,7 +52,8 @@ class AuthController(
         description = "Creates a user account and returns a JWT bearer token for subsequent API requests."
     )
     @ApiResponse(responseCode = "201", description = "User registered successfully.")
-    @ApiResponse(responseCode = "409", description = "Email address already exists.")
+    @BadRequestApiResponse
+    @ConflictApiResponse
     @PostMapping("/api/register")
     @ResponseStatus(HttpStatus.CREATED)
     fun register(@Valid @RequestBody data: RegisterRequest): AuthResponse {
@@ -68,6 +80,9 @@ class AuthController(
 
     /**
      * Authenticates an existing user and returns an authentication token.
+     * @param data The login request containing user credentials.
+     * @return An AuthResponse containing the authenticated user and a JWT token.
+     * @throws InvalidCredentialsException if the credentials are invalid.
      */
     @Operation(
         operationId = "loginUser",
@@ -75,7 +90,8 @@ class AuthController(
         description = "Authenticates a user and returns a JWT bearer token."
     )
     @ApiResponse(responseCode = "200", description = "Login successful.")
-    @ApiResponse(responseCode = "401", description = "Credentials are invalid.")
+    @BadRequestApiResponse
+    @UnauthorizedApiResponse
     @PostMapping("/api/login")
     fun login(@Valid @RequestBody data: LoginRequest): AuthResponse {
         val user = userService.getUserByEmail(data.email)
