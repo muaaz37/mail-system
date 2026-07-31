@@ -7,7 +7,7 @@
 Mail System is a full-stack web application for internal mail handling and shared support-mailbox integration.
 It provides authenticated users with inbox, sent-mail, draft, compose, mail-detail and attachment workflows, while the backend integrates with a configured SMTP/IMAP mailbox for outgoing and incoming support messages.
 
-The repository contains an Angular frontend, a Kotlin/Spring Boot backend and a Docker Compose runtime with PostgreSQL.
+The repository contains an Angular frontend, a Kotlin/Spring Boot backend and a Docker Compose runtime with Keycloak and PostgreSQL.
 
 == System Overview
 
@@ -28,7 +28,7 @@ The system is designed as a split frontend/backend application:
 | Area | Implemented behavior
 
 | Authentication
-| Users can register, log in, receive a JWT and access protected frontend routes and backend API endpoints.
+| Keycloak provides OpenID Connect login and registration. The Angular client uses Authorization Code Flow with PKCE (Proof Key for Code Exchange), while the backend validates signed bearer access tokens as an OAuth2 Resource Server. The application never receives or stores user passwords.
 
 | Mail folders
 | Authenticated users can view incoming mails, sent mails and drafts.
@@ -55,7 +55,7 @@ The system is designed as a split frontend/backend application:
 | The frontend renders internal senders and external IMAP senders consistently in inbox and mail-detail views, and provides a reply action for imported support mails.
 
 | Local container runtime
-| Docker Compose starts frontend, backend, PostgreSQL and SeaweedFS with persistent Docker volumes for database state and attachment objects.
+| Docker Compose starts frontend, backend, Keycloak, PostgreSQL and SeaweedFS with persistent Docker volumes for identity, database and attachment state.
 |===
 
 == Scope
@@ -79,8 +79,8 @@ The backend owns business logic, persistence, security, attachment storage and S
 |===
 | Component | Responsibility
 
-| `AuthController`, `SecurityConfig`, `AuthFilter`, `JwtService`
-| Registration, login, password hashing, JWT creation and request authentication.
+| `SecurityConfig`, `CurrentUserService`, `AuthErrorHandler`
+| Bearer-token validation, API authorization and linking the OpenID Connect subject to a local application profile.
 
 | `UserController`, `UserService`, `UserRepository`
 | User listing, lookup and profile updates.
@@ -117,7 +117,7 @@ The backend owns business logic, persistence, security, attachment storage and S
 | Authenticated shell layout with navigation.
 
 | `src/pages/`
-| Page-level components for login, registration, inbox, sent mails, drafts, compose, support replies, edit, details and not-found handling.
+| Page-level components for the Keycloak login entry point, inbox, sent mails, drafts, compose, support replies, edit, details and not-found handling.
 
 | `src/components/`
 | Reusable form, list, navigation and authentication components.
@@ -170,7 +170,10 @@ mail-system/
 | Angular 21, TypeScript, PrimeNG, PrimeIcons, Tailwind CSS
 
 | Backend
-| Kotlin 2.2, Java 21, Spring Boot 4, Spring Security, Spring Data JPA, Spring Validation
+| Kotlin 2.2, Java 21, Spring Boot 4, Spring Security OAuth2 Resource Server, Spring Data JPA, Spring Validation
+
+| Identity provider
+| Keycloak 26 with OpenID Connect
 
 | Persistence
 | PostgreSQL for Docker Compose, H2 as direct-start fallback
@@ -182,7 +185,7 @@ mail-system/
 | Gradle Kotlin DSL, Gradle wrapper, Node Gradle plugin, npm
 
 | Runtime
-| Docker Compose, Caddy, Eclipse Temurin Java runtime
+| Docker Compose, Caddy, Keycloak, Eclipse Temurin Java runtime
 
 | Quality
 | detekt for Kotlin and angular-eslint for Angular/TypeScript
@@ -224,9 +227,11 @@ DB_NAME=mail_system
 MAIL_CLIENT_HOST_PORT=8081
 SERVER_PORT=8080
 APP_NAME=mail-system
-APP_SECRET=replace_with_local_app_secret
-APP_JWT_EXPIRES_SECONDS=3600
-APP_JWT_SECRET=replace_with_local_jwt_secret
+
+KEYCLOAK_HOST_PORT=9080
+KEYCLOAK_ADMIN_USERNAME=admin
+KEYCLOAK_ADMIN_PASSWORD=replace_with_keycloak_admin_password
+KEYCLOAK_ISSUER_URI=http://localhost:9080/realms/mail-support
 
 STORAGE_S3_ENDPOINT=http://seaweedfs:8333
 STORAGE_S3_REGION=us-east-1
@@ -280,6 +285,9 @@ Open the application at:
 
 * Frontend through Caddy: http://localhost:8081/app/
 * Backend API through Caddy only: http://localhost:8081/api
+* Keycloak administration: http://localhost:9080/admin/
+* Generated OpenAPI document: http://localhost:8081/api/v3/api-docs
+* Swagger UI: http://localhost:8081/api/swagger-ui
 
 Stop the system:
 
@@ -375,26 +383,27 @@ npm run build
 
 == Seed Data
 
-The backend imports seed users from `backend/src/main/resources/data.json` for local evaluation.
-These accounts are sample data and must not be used as real credentials.
+The backend imports local sample profiles from `backend/src/main/resources/data.json` for local evaluation.
+These records contain no credentials and cannot be used to log in. Authentication identities and credentials belong exclusively to Keycloak.
 
-[cols="1,2,2,3,2",options="header"]
+[cols="1,2,2,3",options="header"]
 |===
-| # | First name | Last name | Email | Password
+| # | First name | Last name | Email
 
-| 1 | Ameline | Allanson | `aallanson@example.com` | `123456`
-| 2 | Sanson | Vardey | `svardey1@example.com` | `123456`
-| 3 | Jami | Poe | `jpoe@example.uk` | `123456`
-| 4 | Trent | Ianno | `tianno3@example.com` | `123456`
-| 5 | Alikee | Raisbeck | `araisbeck4@example.com` | `123456`
+| 1 | Ameline | Allanson | `aallanson@example.com`
+| 2 | Sanson | Vardey | `svardey1@example.com`
+| 3 | Jami | Poe | `jpoe@example.uk`
+| 4 | Trent | Ianno | `tianno3@example.com`
+| 5 | Alikee | Raisbeck | `araisbeck4@example.com`
 |===
+
+For local evaluation, `keycloak/realm-mail-support.json` imports one matching Keycloak test identity. Its development-only password is defined in that realm import file.
 
 == Operational Notes
 
 === Authentication
 
-The backend issues JWTs after successful login.
-The frontend stores the token locally and adds it to API requests with an HTTP interceptor.
+The browser redirects users to Keycloak for authentication and registration. The Angular OAuth2/OIDC client performs Authorization Code Flow with PKCE and attaches the access token only to API requests. The Spring Security Resource Server validates the token issuer, lifetime and signature. The standard OpenID Connect `sub` claim links the external identity to a password-free local profile.
 
 === Attachments
 
