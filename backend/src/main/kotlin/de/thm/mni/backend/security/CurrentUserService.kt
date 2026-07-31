@@ -20,9 +20,15 @@ class CurrentUserService(
      * Finds or creates the local profile associated with a Keycloak identity.
      * @param jwt The JWT token containing the identity subject.
      * @return The local profile associated with the identity.
+     * @throws AuthenticatedUserNotFoundException If the identity subject is not found.
      */
     fun resolve(jwt: Jwt): User {
-        userService.getUserByIdentitySubject(jwt.subject)?.let {
+        val subject = jwt.subject
+            ?: throw AuthenticatedUserNotFoundException(
+                "The authenticated identity does not contain a subject identifier."
+            )
+
+        userService.getUserByIdentitySubject(subject)?.let {
             return synchronizeProfile(it, jwt)
         }
 
@@ -37,7 +43,7 @@ class CurrentUserService(
             email = email
         )
 
-        user.identitySubject = jwt.subject
+        user.identitySubject = subject
         return userService.createUser(user)
     }
 

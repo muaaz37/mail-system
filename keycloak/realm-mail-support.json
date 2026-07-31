@@ -31,6 +31,7 @@
         "post.logout.redirect.uris": "http://localhost:8081/app/*##http://localhost:4200/*"
       },
       "defaultClientScopes": [
+        "basic",
         "web-origins",
         "acr",
         "roles",
@@ -50,7 +51,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "ChangeMe123!",
+          "value": "123456",
           "temporary": false
         }
       ]
