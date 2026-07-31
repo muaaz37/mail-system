@@ -7,6 +7,15 @@ import de.thm.mni.backend.mail.dto.MailRequest
 import de.thm.mni.backend.mail.dto.toMailCreate
 import de.thm.mni.backend.mail.dto.toMailUpdate
 import de.thm.mni.backend.mail.enums.MailStatus
+import de.thm.mni.backend.openapi.BearerAuthenticated
+import de.thm.mni.backend.openapi.DefaultApiErrors
+import de.thm.mni.backend.openapi.BadGatewayApiResponse
+import de.thm.mni.backend.openapi.BadRequestApiResponse
+import de.thm.mni.backend.openapi.NotFoundApiResponse
+import de.thm.mni.backend.openapi.PayloadTooLargeApiResponse
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -29,8 +38,10 @@ import java.util.UUID
  * Provides the HTTP API for drafts, sent mails, inbox mails and support replies.
  */
 @Tag(name = "Mail", description = "Manage drafts, sent mails, inbox mails and support replies.")
+@BearerAuthenticated
+@DefaultApiErrors
 @RestController
-@RequestMapping("/api/mails")
+@RequestMapping("/api/mails", produces = [MediaType.APPLICATION_JSON_VALUE])
 class MailController(
     private val mailService: MailService,
     private val mailAccessService: MailAccessService,
@@ -41,6 +52,8 @@ class MailController(
      * Returns draft mails owned by the authenticated user.
      */
     @GetMapping("/drafts")
+    @Operation(operationId = "getDraftMails", summary = "List draft mails", description = "Returns all draft mails owned by the authenticated user.")
+    @ApiResponse(responseCode = "200", description = "Draft mails returned successfully.")
     fun getCreatedMails(@AuthenticationPrincipal userDetails: UserDetails): List<MailDTO> {
         val user = mailAccessService.authenticatedUser(userDetails)
         val userMails = mailService.getAllCreatedUserMails(user)
@@ -51,6 +64,8 @@ class MailController(
      * Returns sent mails owned by the authenticated user.
      */
     @GetMapping("/sent")
+    @Operation(operationId = "getSentMails", summary = "List sent mails", description = "Returns all mails sent by the authenticated user.")
+    @ApiResponse(responseCode = "200", description = "Sent mails returned successfully.")
     fun getSentMails(@AuthenticationPrincipal userDetails: UserDetails): List<MailDTO> {
         val user = mailAccessService.authenticatedUser(userDetails)
         val userMails = mailService.getAllSentUserMails(user)
@@ -62,9 +77,13 @@ class MailController(
      */
     @PostMapping(consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(operationId = "createDraftMail", summary = "Create a draft mail", description = "Creates a draft from the JSON part named `data` and optional file attachments.")
+    @ApiResponse(responseCode = "201", description = "Draft mail created successfully.")
+    @BadRequestApiResponse
+    @PayloadTooLargeApiResponse
     fun createMail(
         @Valid @RequestPart("data") data: MailRequest,
-        @RequestPart("attachments") attachments: List<MultipartFile>,
+        @RequestPart("attachments", required = false) attachments: List<MultipartFile> = emptyList(),
         @AuthenticationPrincipal userDetails: UserDetails
     ): MailDTO {
         val user = mailAccessService.authenticatedUser(userDetails)
@@ -76,6 +95,8 @@ class MailController(
      * Returns the user's internal inbox and all imported support mails.
      */
     @GetMapping("/incoming")
+    @Operation(operationId = "getIncomingMails", summary = "List incoming mails", description = "Returns internal inbox mails and imported support mails visible to the authenticated user.")
+    @ApiResponse(responseCode = "200", description = "Incoming mails returned successfully.")
     fun getIncomingMailsForUser(@AuthenticationPrincipal userDetails: UserDetails): List<MailDTO> {
         val user = mailAccessService.authenticatedUser(userDetails)
         val userMails = mailService.getIncomingMailsForUser(user.id!!)
@@ -86,8 +107,11 @@ class MailController(
      * Builds a prefilled reply template for an imported support mail.
      */
     @GetMapping("/{mailId}/reply-template")
+    @Operation(operationId = "getMailReplyTemplate", summary = "Get a reply template", description = "Builds prefilled reply data for a visible support mail.")
+    @ApiResponse(responseCode = "200", description = "Reply template returned successfully.")
+    @NotFoundApiResponse
     fun getReplyTemplate(
-        @PathVariable mailId: UUID,
+        @Parameter(description = "Mail identifier returned by a mail-list operation.") @PathVariable mailId: UUID,
         @AuthenticationPrincipal userDetails: UserDetails
     ): MailReplyTemplate {
         val user = mailAccessService.authenticatedUser(userDetails)
@@ -100,8 +124,11 @@ class MailController(
      * Returns a single mail when the authenticated user is allowed to view it.
      */
     @GetMapping("/{mailId}")
+    @Operation(operationId = "getMailById", summary = "Get a mail", description = "Returns a mail when the authenticated user is allowed to view it.")
+    @ApiResponse(responseCode = "200", description = "Mail returned successfully.")
+    @NotFoundApiResponse
     fun getMailById(
-        @PathVariable mailId: UUID,
+        @Parameter(description = "Mail identifier returned by a mail-list operation.") @PathVariable mailId: UUID,
         @AuthenticationPrincipal userDetails: UserDetails
     ): MailDTO {
         val user = mailAccessService.authenticatedUser(userDetails)
@@ -114,10 +141,15 @@ class MailController(
      * Updates a draft mail owned by the authenticated user.
      */
     @PutMapping("/{mailId}", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @Operation(operationId = "updateDraftMail", summary = "Update a draft mail", description = "Replaces the editable content and attachments of a draft owned by the authenticated user.")
+    @ApiResponse(responseCode = "200", description = "Draft mail updated successfully.")
+    @BadRequestApiResponse
+    @NotFoundApiResponse
+    @PayloadTooLargeApiResponse
     fun updateMail(
-        @PathVariable mailId: UUID,
+        @Parameter(description = "Draft identifier returned by `GET /api/mails/drafts`.") @PathVariable mailId: UUID,
         @Valid @RequestPart("data") mail: MailRequest,
-        @RequestPart("attachments") attachments: List<MultipartFile>,
+        @RequestPart("attachments", required = false) attachments: List<MultipartFile> = emptyList(),
         @AuthenticationPrincipal userDetails: UserDetails
     ): MailDTO {
         val user = mailAccessService.authenticatedUser(userDetails)
@@ -137,7 +169,10 @@ class MailController(
      */
     @DeleteMapping("/{mailId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun deleteMail(@PathVariable mailId: UUID, @AuthenticationPrincipal userDetails: UserDetails) {
+    @Operation(operationId = "deleteMail", summary = "Delete a mail", description = "Deletes a draft or stored mail owned by the authenticated user.")
+    @ApiResponse(responseCode = "204", description = "Mail deleted successfully.")
+    @NotFoundApiResponse
+    fun deleteMail(@Parameter(description = "Mail identifier returned by a mail-list operation.") @PathVariable mailId: UUID, @AuthenticationPrincipal userDetails: UserDetails) {
         val userId = UUID.fromString(userDetails.username)
         val existingMail = mailAccessService.mailOrNotFound(mailId)
         mailAccessService.ensureOwnedBy(existingMail, userId)
@@ -148,7 +183,11 @@ class MailController(
      * Sends an existing draft mail owned by the authenticated user.
      */
     @PostMapping("/send/{mailId}")
-    fun sendMail(@PathVariable mailId: UUID, @AuthenticationPrincipal userDetails: UserDetails) {
+    @Operation(operationId = "sendDraftMail", summary = "Send a draft mail", description = "Sends an existing draft owned by the authenticated user.")
+    @ApiResponse(responseCode = "200", description = "Draft sent successfully.")
+    @NotFoundApiResponse
+    @BadGatewayApiResponse
+    fun sendMail(@Parameter(description = "Draft identifier returned by `GET /api/mails/drafts`.") @PathVariable mailId: UUID, @AuthenticationPrincipal userDetails: UserDetails) {
         val userId = UUID.fromString(userDetails.username)
         val existingMail = mailAccessService.mailOrNotFound(mailId)
         mailAccessService.ensureOwnedBy(existingMail, userId)
@@ -159,9 +198,14 @@ class MailController(
      * Creates a mail and sends it in the same request.
      */
     @PostMapping("/send")
+    @Operation(operationId = "createAndSendMail", summary = "Create and send a mail", description = "Creates a mail from multipart data and sends it immediately.")
+    @ApiResponse(responseCode = "200", description = "Mail created and sent successfully.")
+    @BadRequestApiResponse
+    @PayloadTooLargeApiResponse
+    @BadGatewayApiResponse
     fun createAndSendMail(
         @Valid @RequestPart("data") data: MailRequest,
-        @RequestPart("attachments") attachments: List<MultipartFile>,
+        @RequestPart("attachments", required = false) attachments: List<MultipartFile> = emptyList(),
         @AuthenticationPrincipal userDetails: UserDetails
     ): MailDTO {
         val user = mailAccessService.authenticatedUser(userDetails)
