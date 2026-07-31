@@ -1,7 +1,6 @@
 import { Routes, UrlMatchResult, UrlMatcher, UrlSegment } from '@angular/router';
 import { LoginPage } from '../pages/login-page/login-page';
 import { RootLayout } from '../layouts/root-layout/root-layout';
-import { RegisterPage } from '../pages/register-page/register-page';
 import { AuthGuard } from '../services/auth/auth-guard';
 import { MailSent } from '../pages/mails/mail-sent/mail-sent';
 import { MailDrafts } from '../pages/mails/mail-drafts/mail-drafts';
@@ -46,7 +45,6 @@ function prefixWithUuidRoute(prefix: string, paramName: string): UrlMatcher {
 
 export const routes: Routes = [
   { path: 'login', component: LoginPage },
-  { path: 'register', component: RegisterPage },
   { path: '', redirectTo: '/mails', pathMatch: 'full' },
   {
     path: 'mails',

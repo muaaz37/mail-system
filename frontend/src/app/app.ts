@@ -17,7 +17,7 @@ export class App {
   private redirectRootSpaPathToAppBase() {
     const baseHref = document.querySelector('base')?.getAttribute('href');
     const path = window.location.pathname;
-    const rootSpaPath = /^(\/mails(?:\/.*)?|\/login|\/register|\/404)$/.test(path);
+    const rootSpaPath = /^(\/mails(?:\/.*)?|\/login|\/404)$/.test(path);
 
     if (baseHref === '/app/' && rootSpaPath) {
       window.location.replace(`/app${path}${window.location.search}${window.location.hash}`);

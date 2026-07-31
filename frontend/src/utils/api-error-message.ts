@@ -37,7 +37,7 @@ export function readApiErrorMessage(error: unknown, fallback = 'An error occurre
   const apiMessage = extractApiMessage(error);
 
   if (error.status === 401) {
-    return apiMessage === 'Invalid credentials' ? 'Invalid email or password.' : SESSION_EXPIRED_MESSAGE;
+    return SESSION_EXPIRED_MESSAGE;
   }
 
   if (error.status === 403) {
