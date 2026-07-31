@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { SideNavigation } from './side-navigation';
+import { AuthService } from '../../../services/auth/auth-service';
 
 describe('SideNavigation', () => {
   let component: SideNavigation;
@@ -8,7 +10,11 @@ describe('SideNavigation', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SideNavigation]
+      imports: [SideNavigation],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { logout: () => undefined } },
+      ],
     })
     .compileComponents();
 
