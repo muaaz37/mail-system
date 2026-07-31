@@ -1,17 +1,27 @@
 import { inject, Injectable } from '@angular/core';
+import {
+  CanActivate,
+  Router,
+  UrlTree,
+} from '@angular/router';
 import { AuthService } from './auth-service';
-import { CanActivate } from '@angular/router';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class AuthGuard implements CanActivate {
-  private authService = inject(AuthService);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
-  public canActivate(): boolean {
+  /**
+   * Determines whether the route can be activated based on the user's authentication status.
+   * If the user is authenticated, the route is activated. Otherwise, the user is redirected to the login page.
+   */
+  public canActivate(): boolean | UrlTree {
     if (this.authService.isAuthenticated()) {
       return true;
-    } else {
-      this.authService.logout();
-      return false;
     }
+
+    return this.router.createUrlTree(['/login']);
   }
 }

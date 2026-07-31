@@ -1,102 +1,91 @@
-import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { OAuthService } from 'angular-oauth2-oidc';
+import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../../constants';
-import { AuthResponse, LoginRequest, RegisterRequest } from '../../types/auth';
-import { ErrorResponse } from '../../types/error';
-
-interface JwtPayload {
-  exp?: number;
-}
+import { User } from '../../types/user';
+import { authConfig } from './auth-config';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
-  private http = inject(HttpClient);
-  private router = inject(Router);
+  private readonly oauthService = inject(OAuthService);
+  private readonly http = inject(HttpClient);
 
-  public login(credentials: LoginRequest): Observable<AuthResponse | ErrorResponse> {
-    return this.http.post<AuthResponse | ErrorResponse>(`${API_BASE_URL}/login`, credentials);
+  private initializationPromise?: Promise<void>;
+  private currentUser: User | null = null;
+
+  /**
+   * Loads the identity provider metadata and processes a possible login callback.
+   */
+  public initialize(): Promise<void> {
+    if (!this.initializationPromise) {
+      this.initializationPromise = this.initializeOidc();
+    }
+
+    return this.initializationPromise;
   }
 
-  public register(credentials: RegisterRequest): Observable<AuthResponse | ErrorResponse> {
-    return this.http.post<AuthResponse | ErrorResponse>(`${API_BASE_URL}/register`, credentials);
+  /**
+   * Starts the OpenID Connect Authorization Code Flow with PKCE.
+   */
+  public login(): void {
+    this.oauthService.initCodeFlow();
   }
 
-  public storeSession(authResponse: AuthResponse): void {
-    localStorage.setItem('token', authResponse.token);
-    localStorage.setItem('user', JSON.stringify(authResponse.user));
-  }
-
+  /**
+   * Ends the local session and redirects to the identity provider logout.
+   */
   public logout(): void {
-    this.clearSession();
-    this.router.navigate(['login']);
+    this.currentUser = null;
+    this.oauthService.logOut();
   }
 
-  public clearSession(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-  }
-
+  /**
+   * Returns whether a valid access token is available.
+   */
   public isAuthenticated(): boolean {
-    return this.getValidToken() !== null;
+    return this.oauthService.hasValidAccessToken();
   }
 
-  public getValidToken(): string | null {
-    const token = this.getToken();
-    if (!token || this.isTokenExpired(token)) {
-      this.clearSession();
-      return null;
-    }
-
-    return token;
+  /**
+   * Returns the local application profile of the authenticated identity.
+   */
+  public getCurrentUser(): User | null {
+    return this.currentUser;
   }
 
-  public getToken(): string | null {
-    return localStorage.getItem('token');
-  }
-
-  public getCurrentUser() {
-    const user = localStorage.getItem('user');
-    if (!user) {
-      return null;
-    }
+  /**
+   * initialize the OIDC flow and load the current user
+   */
+  private async initializeOidc(): Promise<void> {
+    this.oauthService.configure(authConfig);
 
     try {
-      return JSON.parse(user);
-    } catch {
-      this.clearSession();
-      return null;
-    }
-  }
+      await this.oauthService.loadDiscoveryDocumentAndTryLogin();
 
-  private isTokenExpired(token: string): boolean {
-    const payload = this.decodeJwtPayload(token);
-    if (!payload?.exp) {
-      return true;
-    }
-
-    return payload.exp * 1000 <= Date.now();
-  }
-
-  private decodeJwtPayload(token: string): JwtPayload | null {
-    try {
-      const payload = token.split('.')[1];
-      if (!payload) {
-        return null;
+      if (!this.oauthService.hasValidAccessToken()) {
+        this.currentUser = null;
+        return;
       }
 
-      const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
-      const paddedPayload = normalizedPayload.padEnd(
-        Math.ceil(normalizedPayload.length / 4) * 4,
-        '=',
-      );
-
-      return JSON.parse(window.atob(paddedPayload)) as JwtPayload;
-    } catch {
-      return null;
+      this.oauthService.setupAutomaticSilentRefresh();
+      await this.loadCurrentUser();
+    } catch (error) {
+      // A stale or invalid session must not prevent the application from rendering.
+      this.currentUser = null;
+      this.oauthService.logOut(true);
+      console.error('OpenID Connect initialization failed.', error);
     }
+  }
+
+  /**
+   * Loads the current authenticated user's profile from the backend API and stores it in the `currentUser`property.
+   */
+  private async loadCurrentUser(): Promise<void> {
+    this.currentUser = await firstValueFrom(
+      this.http.get<User>(`${API_BASE_URL}/users/me`),
+    );
   }
 }

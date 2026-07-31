@@ -32,6 +32,7 @@
     "@angular/router": "^21.2.18",
     "@primeuix/themes": "^2.0.3",
     "@tailwindcss/postcss": "^4.1.18",
+    "angular-oauth2-oidc": "^21.0.3",
     "postcss": "^8.5.6",
     "primeicons": "^7.0.0",
     "primeng": "^21.1.1",

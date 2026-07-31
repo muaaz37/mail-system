@@ -1,11 +1,10 @@
-<p-toast />
-
 <main class="auth-shell">
   <section class="auth-panel">
     <div class="auth-brand">
       <div class="auth-brand-mark">
         <i class="pi pi-comments"></i>
       </div>
+
       <div>
         <p>THM Support</p>
         <h1>Mail Desk</h1>
@@ -13,9 +12,13 @@
     </div>
 
     <div class="auth-copy">
-      <p class="auth-eyebrow">Shared mailbox access</p>
+      <p class="auth-eyebrow">Secure mailbox access</p>
       <h2>Sign in</h2>
-      <p>Use your application account to manage tickets, drafts, sent mails and attachments.</p>
+
+      <p>
+        Authentication is securely handled by the external identity provider.
+        The Mail Desk never receives or stores your password.
+      </p>
     </div>
 
     <div class="auth-scope">
@@ -25,59 +28,23 @@
     </div>
   </section>
 
-  <section class="auth-card" aria-label="Login form">
+  <section class="auth-card" aria-label="Login">
     <div class="auth-card-header">
-      <p>Account</p>
+      <p>OpenID Connect</p>
       <h2>Welcome back</h2>
     </div>
 
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
-      <label class="auth-field" for="email">
-        <span>Email</span>
-        <input
-          pInputText
-          type="email"
-          id="email"
-          formControlName="email"
-          [invalid]="isInvalid('email')"
-          autocomplete="email"
-        />
-      </label>
-      @if (isInvalid('email')) {
-        @if (loginForm.get('email')?.errors?.['required']) {
-          <p-message severity="error" size="small" variant="simple">Email is required.</p-message>
-        }
-        @if (loginForm.get('email')?.errors?.['email']) {
-          <p-message severity="error" size="small" variant="simple">Please enter a valid email.</p-message>
-        }
-      }
-
-      <label class="auth-field" for="password">
-        <span>Password</span>
-        <input
-          pInputText
-          type="password"
-          id="password"
-          formControlName="password"
-          [invalid]="isInvalid('password')"
-          autocomplete="current-password"
-        />
-      </label>
-      @if (isInvalid('password')) {
-        <p-message severity="error" size="small" variant="simple">
-          Password should be at least 6 characters.
-        </p-message>
-      }
-
-      <button type="submit" class="auth-submit">
-        <span>Login</span>
-        <i class="pi pi-arrow-right"></i>
-      </button>
-    </form>
-
-    <p class="auth-switch">
-      No account yet?
-      <a routerLink="/register">Create account</a>
+    <p>
+      Continue to the identity provider to sign in or create an account.
     </p>
+
+    <button
+      type="button"
+      class="auth-submit"
+      (click)="login()"
+    >
+      <span>Continue to login</span>
+      <i class="pi pi-sign-in"></i>
+    </button>
   </section>
 </main>
