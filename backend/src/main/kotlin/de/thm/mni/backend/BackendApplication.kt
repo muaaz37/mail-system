@@ -20,8 +20,8 @@ import org.springframework.scheduling.annotation.EnableScheduling
         title = "Mail Support System API",
         version = "1.0.0",
         description = "API for managing users, internal and external mail, attachments, and support tickets. " +
-                "User identities and credentials are managed by Keycloak through OpenID Connect. " +
-                "Protected operations require a Keycloak access token as a JWT bearer token."
+                "User identities and credentials are managed by an external identity provider through OpenID Connect. " +
+                "Protected operations require a valid access token supplied as a JWT bearer token."
         ,
         contact = Contact(
             name = "Mail Support System",
@@ -64,8 +64,8 @@ import org.springframework.scheduling.annotation.EnableScheduling
     type = SecuritySchemeType.HTTP,
     scheme = "bearer",
     bearerFormat = "JWT",
-    description = "Keycloak access token issued for the `mail-client` OpenID Connect client. " +
-    "Enter only the token value without the `Bearer` prefix."
+    description = "OpenID Connect access token issued for this API by the configured identity provider. " +
+            "Enter only the token value without the `Bearer` prefix."
 )
 @SpringBootApplication
 @EnableScheduling

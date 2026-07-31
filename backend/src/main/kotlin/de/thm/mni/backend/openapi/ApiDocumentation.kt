@@ -28,7 +28,7 @@ class OpenApiConfiguration {
      * Defines the order in which API tags are displayed in Swagger UI.
      */
     private companion object {
-        val TAG_ORDER = listOf("Auth", "User", "Mail", "Support Ticket", "Attachment", "IMAP Diagnostics")
+        val TAG_ORDER = listOf("User", "Mail", "Support Ticket", "Attachment", "IMAP Diagnostics")
     }
 }
 
@@ -80,13 +80,13 @@ annotation class BadRequestApiResponse
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
 @ApiResponse(
-    responseCode = "401", description = "Authentication credentials are missing or invalid.",
+    responseCode = "401", description = "The OpenID Connect access token is missing or invalid.",
     content = [Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = Schema(implementation = AppError::class))]
 )
 annotation class UnauthorizedApiResponse
 
 /**
- * Documents the error response for forbidden requests (HTTP 403).
+ * Documents the error response for resources that are missing or hidden from the caller (HTTP 404).
  */
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
