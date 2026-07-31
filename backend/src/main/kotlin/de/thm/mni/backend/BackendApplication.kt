@@ -20,8 +20,9 @@ import org.springframework.scheduling.annotation.EnableScheduling
         title = "Mail Support System API",
         version = "1.0.0",
         description = "API for managing users, internal and external mail, attachments, and support tickets. " +
-            "Support messages are imported through IMAP and external replies are sent through SMTP. " +
-            "Registration and login are public; all other operations require a JWT bearer token.",
+                "User identities and credentials are managed by Keycloak through OpenID Connect. " +
+                "Protected operations require a Keycloak access token as a JWT bearer token."
+        ,
         contact = Contact(
             name = "Mail Support System",
             url = "https://github.com/muaaz37/mail-system"
@@ -36,12 +37,26 @@ import org.springframework.scheduling.annotation.EnableScheduling
         url = "https://github.com/muaaz37/mail-system/blob/main/README.adoc"
     ),
     tags = [
-        Tag(name = "Auth", description = "Register users and issue JWT bearer tokens."),
-        Tag(name = "User", description = "Manage registered application users."),
-        Tag(name = "Mail", description = "Manage drafts, sent mails, inbox mails and support replies."),
-        Tag(name = "Support Ticket", description = "Manage shared support tickets and lifecycle states."),
-        Tag(name = "Attachment", description = "Download stored mail attachments."),
-        Tag(name = "IMAP Diagnostics", description = "Inspect and trigger support mailbox imports.")
+        Tag(
+            name = "User",
+            description = "Manage registered application users."
+        ),
+        Tag(
+            name = "Mail",
+            description = "Manage drafts, sent mails, inbox mails and support replies."
+        ),
+        Tag(
+            name = "Support Ticket",
+            description = "Manage shared support tickets and lifecycle states."
+        ),
+        Tag(
+            name = "Attachment",
+            description = "Download stored mail attachments."
+        ),
+        Tag(
+            name = "IMAP Diagnostics",
+            description = "Inspect and trigger support mailbox imports."
+        )
     ]
 )
 @SecurityScheme(
@@ -49,8 +64,8 @@ import org.springframework.scheduling.annotation.EnableScheduling
     type = SecuritySchemeType.HTTP,
     scheme = "bearer",
     bearerFormat = "JWT",
-    description = "JWT returned by `/api/register` or `/api/login`. " +
-        "Use the token without the `Bearer` prefix in Swagger UI's Authorize dialog."
+    description = "Keycloak access token issued for the `mail-client` OpenID Connect client. " +
+    "Enter only the token value without the `Bearer` prefix."
 )
 @SpringBootApplication
 @EnableScheduling
