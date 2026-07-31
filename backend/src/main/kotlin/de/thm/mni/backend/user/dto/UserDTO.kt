@@ -4,7 +4,7 @@ import de.thm.mni.backend.user.User
 import java.util.UUID
 
 /**
- * API response model for user data without password information.
+ * API response model for local application profile data.
  */
 data class UserDTO(
     val id: UUID?,

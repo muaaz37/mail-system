@@ -35,16 +35,6 @@ class ErrorHandler {
     }
 
     /**
-     * Handles failed login attempts.
-     */
-    @ExceptionHandler(InvalidCredentialsException::class)
-    fun handleInvalidCredentialsException(err: InvalidCredentialsException): ResponseEntity<AppError> {
-        log.warn("Invalid credentials exception: {}", err.message)
-        val error = AppError(HttpStatus.UNAUTHORIZED.value(), err.message)
-        return ResponseEntity<AppError>(error, HttpStatus.UNAUTHORIZED)
-    }
-
-    /**
      * Handles stale JWT sessions after database recreation or user deletion.
      */
     @ExceptionHandler(AuthenticatedUserNotFoundException::class)

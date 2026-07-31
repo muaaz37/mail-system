@@ -74,7 +74,7 @@ class UserController(
     @ApiResponse(responseCode = "200", description = "User returned successfully.")
     @NotFoundApiResponse
     fun getUserById(
-        @Parameter(description = "User identifier returned by registration, login, or `GET /api/users`.")
+        @Parameter(description = "Local user identifier returned by `GET /api/users` or `GET /api/users/me`.")
         @PathVariable id: UUID
     ): UserDTO {
         return userService.getUserById(id)?.toDTO() ?: throw ResourceNotFoundException("User not found")
@@ -90,7 +90,7 @@ class UserController(
     @NotFoundApiResponse
     @ConflictApiResponse
     fun updateUser(
-        @Parameter(description = "Identifier of the authenticated user, returned by login or registration.")
+        @Parameter(description = "Local identifier returned by `GET /api/users/me`.")
         @PathVariable id: UUID,
         @Valid @RequestBody userData: UserUpdate,
         @AuthenticationPrincipal jwt: Jwt
@@ -117,7 +117,7 @@ class UserController(
     @ApiResponse(responseCode = "204", description = "User account deleted successfully.")
     @NotFoundApiResponse
     fun deleteUser(
-        @Parameter(description = "Identifier of the authenticated user, returned by login or registration.")
+        @Parameter(description = "Local identifier returned by `GET /api/users/me`.")
         @PathVariable id: UUID,
         @AuthenticationPrincipal jwt: Jwt
     ) {
