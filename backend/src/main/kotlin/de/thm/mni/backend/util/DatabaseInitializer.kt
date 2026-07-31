@@ -11,7 +11,6 @@ import de.thm.mni.backend.user.UserRepository
 import de.thm.mni.backend.util.dto.SeedData
 import org.springframework.boot.CommandLineRunner
 import org.springframework.core.io.ClassPathResource
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Component
 import tools.jackson.core.type.TypeReference
 import tools.jackson.databind.ObjectMapper
@@ -23,8 +22,7 @@ import tools.jackson.databind.ObjectMapper
 class DatabaseInitializer(
     private val userRepository: UserRepository,
     private val mailRepository: MailRepository,
-    private val mailRecordRepository: MailRecordRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val mailRecordRepository: MailRecordRepository
 ) : CommandLineRunner {
     /**
      * Reads seed data and stores the initial users, mails and recipient records.
@@ -43,7 +41,6 @@ class DatabaseInitializer(
                 firstName = dto.firstName,
                 lastName = dto.lastName,
                 email = dto.email,
-                password = passwordEncoder.encode(dto.password).toString()
                 ))
             }
         }

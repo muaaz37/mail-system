@@ -3,32 +3,27 @@
     {
       "firstName": "Ameline",
       "lastName": "Allanson",
-      "email": "aallanson@example.com",
-      "password": "123456"
+      "email": "aallanson@example.com"
     },
     {
       "firstName": "Sanson",
       "lastName": "Vardey",
-      "email": "svardey1@example.com",
-      "password": "123456"
+      "email": "svardey1@example.com"
     },
     {
       "firstName": "Jami",
       "lastName": "Poe",
-      "email": "jpoe@example.uk",
-      "password": "123456"
+      "email": "jpoe@example.uk"
     },
     {
       "firstName": "Trent",
       "lastName": "Ianno",
-      "email": "tianno3@example.com",
-      "password": "123456"
+      "email": "tianno3@example.com"
     },
     {
       "firstName": "Alikee",
       "lastName": "Raisbeck",
-      "email": "araisbeck4@example.com",
-      "password": "123456"
+      "email": "araisbeck4@example.com"
     }
   ],
   "mails": [
