@@ -1,43 +1,24 @@
 package de.thm.mni.backend.security
 
 import de.thm.mni.backend.error.AuthErrorHandler
-import de.thm.mni.backend.util.SaltPepperPasswordEncoder
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
-import org.springframework.security.crypto.password.PasswordEncoder
-import org.springframework.security.core.userdetails.UserDetailsService
-import org.springframework.security.core.userdetails.UsernameNotFoundException
+import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
 
+
 /**
- * Configures password hashing, JWT filtering and HTTP security rules.
+ * Configures the API as a stateless OAuth 2.0 resource server.
+ * Keycloak authenticates users, while Spring Security validates access tokens.
  */
 @Configuration
-class SecurityConfig(@Value("\${app.secret}") private val pepper: String) {
-    /**
-     * Provides the password encoder with the configured application pepper.
-     */
-    @Bean
-    fun passwordEncoder(): PasswordEncoder = SaltPepperPasswordEncoder(pepper)
+class SecurityConfig {
 
-    /**
-     * Disables Spring Boot's generated default user; this API authenticates only via custom JWT handling.
-     */
-    @Bean
-    fun userDetailsService(): UserDetailsService =
-        UserDetailsService { throw UsernameNotFoundException("Default login users are not configured.") }
-
-    /**
-     * Builds the stateless API security filter chain.
-     */
     @Bean
     fun securityFilterChain(
         http: HttpSecurity,
-        authFilter: AuthFilter,
         authErrorHandler: AuthErrorHandler
     ): SecurityFilterChain =
         http
@@ -45,29 +26,45 @@ class SecurityConfig(@Value("\${app.secret}") private val pepper: String) {
             .cors {
                 it.configurationSource {
                     CorsConfiguration().apply {
-                        allowedOriginPatterns = listOf("*")
-                        allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        allowedOrigins = listOf(
+                            "http://localhost:8081",
+                            "http://localhost:4200"
+                        )
+                        allowedMethods = listOf(
+                            "GET",
+                            "POST",
+                            "PUT",
+                            "DELETE",
+                            "OPTIONS"
+                        )
                         allowedHeaders = listOf("*")
                         allowCredentials = true
                         maxAge = CORS_MAX_AGE_SECONDS
                     }
                 }
             }
+            // Configure session management for stateless operation
+            .sessionManagement {
+                it.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            }
             .authorizeHttpRequests {
                 it.requestMatchers(
-                    "/api/register",
-                    "/api/login",
                     "/api/v3/api-docs",
                     "/api/v3/api-docs/**",
                     "/api/swagger-ui",
-                    "/api/swagger-ui/**"
+                    "/api/swagger-ui/**",
+                    "/api/swagger-ui.html"
                 ).permitAll()
+
                 it.anyRequest().authenticated()
             }
             .exceptionHandling {
                 it.authenticationEntryPoint(authErrorHandler)
             }
-            .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter::class.java)
+            .oauth2ResourceServer {
+                it.jwt { }
+                it.authenticationEntryPoint(authErrorHandler)
+            }
             .formLogin { it.disable() }
             .httpBasic { it.disable() }
             .build()
