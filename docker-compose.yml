@@ -10,6 +10,7 @@ services:
       - "${MAIL_CLIENT_HOST_PORT:-8081}:80"
     depends_on:
       - mail-server
+      - keycloak
 
   mail-server:
     build:
@@ -20,6 +21,8 @@ services:
       database:
         condition: service_healthy
       seaweedfs:
+        condition: service_started
+      keycloak:
         condition: service_started
     expose:
       - "${SERVER_PORT:-8080}"
@@ -40,9 +43,8 @@ services:
       STORAGE_S3_PATH_STYLE_ACCESS: ${STORAGE_S3_PATH_STYLE_ACCESS:-true}
       STORAGE_S3_INITIALIZE_BUCKET: ${STORAGE_S3_INITIALIZE_BUCKET:-true}
       APP_NAME: ${APP_NAME:-mail-system}
-      APP_SECRET: ${APP_SECRET:?APP_SECRET must be set}
-      APP_JWT_EXPIRES_SECONDS: ${APP_JWT_EXPIRES_SECONDS:-3600}
-      APP_JWT_SECRET: ${APP_JWT_SECRET:?APP_JWT_SECRET must be set}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:?KEYCLOAK_ISSUER_URI must be set}
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/mail-support/protocol/openid-connect/certs
       MAIL_SMTP_HOST: ${MAIL_SMTP_HOST:?MAIL_SMTP_HOST must be set}
       MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-465}
       MAIL_SMTP_USERNAME: "${MAIL_SMTP_USERNAME:-}"
@@ -90,6 +92,20 @@ services:
     volumes:
       - seaweedfs_data:/data
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.3
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD must be set}
+    ports:
+      - "${KEYCLOAK_HOST_PORT:-9080}:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./keycloak/realm-mail-support.json:/opt/keycloak/data/import/realm-mail-support.json:ro
+
 volumes:
   db_data:
   seaweedfs_data:
+  keycloak_data:
