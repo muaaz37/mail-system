@@ -9,7 +9,9 @@ COPY frontend/build.gradle.kts ./frontend/build.gradle.kts
 COPY backend/src ./backend/src
 
 RUN --mount=type=cache,target=/root/.gradle \
-    chmod +x ./gradlew && ./gradlew :backend:installDist --no-daemon
+    sed -i 's/\r$//' ./gradlew \
+    && chmod +x ./gradlew \
+    && ./gradlew :backend:installDist --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
 
