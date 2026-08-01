@@ -15,6 +15,9 @@ import de.thm.mni.backend.openapi.NotFoundApiResponse
 import de.thm.mni.backend.openapi.PayloadTooLargeApiResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Encoding
+import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -78,6 +81,12 @@ class MailController(
     @PostMapping(consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(operationId = "createDraftMail", summary = "Create a draft mail", description = "Creates a draft from the JSON part named `data` and optional file attachments.")
+    @RequestBody(
+        content = [Content(
+            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+            encoding = [Encoding(name = "data", contentType = MediaType.APPLICATION_JSON_VALUE)]
+        )]
+    )
     @ApiResponse(responseCode = "201", description = "Draft mail created successfully.")
     @BadRequestApiResponse
     @PayloadTooLargeApiResponse
@@ -142,6 +151,12 @@ class MailController(
      */
     @PutMapping("/{mailId}", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @Operation(operationId = "updateDraftMail", summary = "Update a draft mail", description = "Replaces the editable content and attachments of a draft owned by the authenticated user.")
+    @RequestBody(
+        content = [Content(
+            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+            encoding = [Encoding(name = "data", contentType = MediaType.APPLICATION_JSON_VALUE)]
+        )]
+    )
     @ApiResponse(responseCode = "200", description = "Draft mail updated successfully.")
     @BadRequestApiResponse
     @NotFoundApiResponse
@@ -197,8 +212,14 @@ class MailController(
     /**
      * Creates a mail and sends it in the same request.
      */
-    @PostMapping("/send")
+    @PostMapping("/send", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @Operation(operationId = "createAndSendMail", summary = "Create and send a mail", description = "Creates a mail from multipart data and sends it immediately.")
+    @RequestBody(
+        content = [Content(
+            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+            encoding = [Encoding(name = "data", contentType = MediaType.APPLICATION_JSON_VALUE)]
+        )]
+    )
     @ApiResponse(responseCode = "200", description = "Mail created and sent successfully.")
     @BadRequestApiResponse
     @PayloadTooLargeApiResponse

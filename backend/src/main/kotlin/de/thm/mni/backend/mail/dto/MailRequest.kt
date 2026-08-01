@@ -20,13 +20,13 @@ data class MailRequest(
     val content: String,
     @field:Schema(description = "Selects internal application delivery or external SMTP delivery.", example = "EXTERNAL")
     val deliveryMode: MailDeliveryMode = MailDeliveryMode.INTERNAL,
-    @field:Schema(description = "Internal user identifiers in the To field.")
+    @field:Schema(description = "Local user IDs returned by `GET /api/users`. Do not use an OpenID Connect `sub` value.")
     val toIds: MutableList<UUID> = mutableListOf(),
-    @field:Schema(description = "Internal user identifiers in the Cc field.")
+    @field:Schema(description = "Local user IDs returned by `GET /api/users` for the Cc field.")
     val ccIds: MutableList<UUID> = mutableListOf(),
-    @field:Schema(description = "Internal user identifiers in the Bcc field.")
+    @field:Schema(description = "Local user IDs returned by `GET /api/users` for the Bcc field.")
     val bccIds: MutableList<UUID> = mutableListOf(),
-    @field:Schema(description = "Internal user identifiers in the Reply-To field.")
+    @field:Schema(description = "Local user IDs returned by `GET /api/users` for the Reply-To field.")
     val replyToIds: MutableList<UUID> = mutableListOf(),
     @field:Schema(description = "External email addresses in the To field.", example = "[\"customer@example.com\"]")
     val externalTo: MutableList<String> = mutableListOf(),
