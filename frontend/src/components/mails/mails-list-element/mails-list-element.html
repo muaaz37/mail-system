@@ -24,7 +24,9 @@
           <span class="sender-email">{{ getMailSenderDisplay(mail).email }}</span>
         }
       </div>
-      <span class="mail-date">{{ formatDate(mail.createdAt) }}</span>
+      <span class="mail-date">
+        {{ formatDate(mailbox === 'sent' && mail.sentAt ? mail.sentAt : mail.createdAt) }}
+      </span>
     </div>
 
     <div class="mail-card-subject-row">
