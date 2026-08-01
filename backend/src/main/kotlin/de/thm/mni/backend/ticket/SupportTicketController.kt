@@ -39,6 +39,7 @@ class SupportTicketController(
     private val ticketLifecycleService: SupportTicketLifecycleService,
     private val ticketCommandService: SupportTicketCommandService,
     private val ticketReadStateService: SupportTicketReadStateService,
+    private val ticketAccessService: SupportTicketAccessService,
     private val ticketMapper: SupportTicketMapper,
     private val mailMapper: MailMapper,
     private val mailAccessService: MailAccessService
@@ -54,7 +55,10 @@ class SupportTicketController(
         @AuthenticationPrincipal jwt: Jwt
     ): List<SupportTicketDTO> {
         val user = mailAccessService.authenticatedUser(jwt)
-        return ticketLifecycleService.listTickets(view).map { ticket -> ticketMapper.toDTO(ticket, user) }
+        // filter tickets based on view parameter and ensure that the user has access to them
+        return ticketLifecycleService.listTickets(view)
+            .filter { ticket -> ticketAccessService.canView(ticket, user) }
+            .map { ticket -> ticketMapper.toDTO(ticket, user) }
     }
 
     /**
@@ -70,6 +74,7 @@ class SupportTicketController(
     ): SupportTicketDetailDTO {
         val user = mailAccessService.authenticatedUser(jwt)
         val ticket = ticketCommandService.ticketOrNotFound(ticketId)
+        ticketAccessService.ensureVisible(ticket, user)
         val mails = ticket.mails
             .sortedBy { mail -> mail.createdAt }
             .map { mail -> mailMapper.toDTO(user, mail) }
@@ -90,6 +95,7 @@ class SupportTicketController(
         @AuthenticationPrincipal jwt: Jwt
     ): SupportTicketDTO {
         val user = mailAccessService.authenticatedUser(jwt)
+        ticketAccessService.ensureVisible(ticketCommandService.ticketOrNotFound(ticketId), user)
         val ticket = ticketCommandService.assignTo(ticketId, user)
         ticketReadStateService.markRead(ticket, user)
         return ticketMapper.toDTO(ticket, user)
@@ -107,6 +113,7 @@ class SupportTicketController(
         @AuthenticationPrincipal jwt: Jwt
     ): SupportTicketDTO {
         val user = mailAccessService.authenticatedUser(jwt)
+        ticketAccessService.ensureVisible(ticketCommandService.ticketOrNotFound(ticketId), user)
         val ticket = ticketCommandService.unassign(ticketId)
         ticketReadStateService.markRead(ticket, user)
         return ticketMapper.toDTO(ticket, user)
@@ -124,6 +131,7 @@ class SupportTicketController(
         @AuthenticationPrincipal jwt: Jwt
     ): SupportTicketDTO {
         val user = mailAccessService.authenticatedUser(jwt)
+        ticketAccessService.ensureVisible(ticketCommandService.ticketOrNotFound(ticketId), user)
         val ticket = ticketCommandService.resolveTicket(ticketId)
         ticketReadStateService.markRead(ticket, user)
         return ticketMapper.toDTO(ticket, user)
@@ -141,6 +149,7 @@ class SupportTicketController(
         @AuthenticationPrincipal jwt: Jwt
     ): SupportTicketDTO {
         val user = mailAccessService.authenticatedUser(jwt)
+        ticketAccessService.ensureVisible(ticketCommandService.ticketOrNotFound(ticketId), user)
         val ticket = ticketCommandService.reopenTicket(ticketId)
         ticketReadStateService.markRead(ticket, user)
         return ticketMapper.toDTO(ticket, user)
@@ -160,6 +169,7 @@ class SupportTicketController(
         @AuthenticationPrincipal jwt: Jwt
     ): SupportTicketDTO {
         val user = mailAccessService.authenticatedUser(jwt)
+        ticketAccessService.ensureVisible(ticketCommandService.ticketOrNotFound(ticketId), user)
         val ticket = ticketCommandService.updatePriority(ticketId, request.priority)
         ticketReadStateService.markRead(ticket, user)
         return ticketMapper.toDTO(ticket, user)
