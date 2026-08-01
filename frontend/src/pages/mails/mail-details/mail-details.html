@@ -27,7 +27,7 @@
           </span>
         </button>
       }
-      @if (mail()?.ticketId) {
+      @if (canViewTicket()) {
         <button
           type="button"
           (click)="viewTicket()"

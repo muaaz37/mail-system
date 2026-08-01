@@ -72,6 +72,15 @@ export class MailDetails implements OnInit {
       mail.ticketStatus !== SupportTicketStatus.RESOLVED;
   }
 
+  /**
+   * Determines if the current user can view the associated support ticket of the mail.
+   */
+  canViewTicket(): boolean {
+    const mail = this.mail();
+    return !!mail?.ticketId &&
+      !(mail.deliveryMode === MailDeliveryMode.INTERNAL && this.isUserSender());
+  }
+
   private loadMail(id: string) {
     this.isLoading.set(true);
     this.mailsService.getMailById(id).subscribe({
