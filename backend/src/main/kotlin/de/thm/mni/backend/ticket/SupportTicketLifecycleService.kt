@@ -18,6 +18,10 @@ class SupportTicketLifecycleService(
     private val supportTicketService: SupportTicketService,
     private val readStateService: SupportTicketReadStateService
 ) {
+    /**
+     * Lists support tickets filtered by the requested workflow view.
+     * Supported values are `open`, `waiting`, `resolved`, and `all`; unknown values use the `open` view.
+     */
     fun listTickets(view: String?): List<SupportTicket> {
         val statuses = when (view?.lowercase()) {
             "waiting" -> listOf(SupportTicketStatus.WAITING_FOR_CUSTOMER)
@@ -48,7 +52,28 @@ class SupportTicketLifecycleService(
     }
 
     /**
+     * Creates an inbox ticket for a successfully sent internal mail.
+     */
+    @Transactional
+    fun attachInternalMail(mail: Mail): SupportTicket {
+        if (mail.status != MailStatus.SENT || mail.deliveryMode != MailDeliveryMode.INTERNAL) {
+            throw InvalidMailRequestException("Only sent internal mails can open internal tickets.")
+        }
+
+        val ticket = findOrCreateTicket(mail)
+        ticket.status = SupportTicketStatus.WAITING_FOR_SUPPORT
+        ticket.closedAt = null
+        enrichTicketFromMail(ticket, mail)
+        mail.ticketNumber = ticket.ticketNumber
+        mail.ticket = ticket
+        return ticketRepository.save(ticket)
+    }
+
+    /**
      * Assigns a draft or sent support reply to the existing original ticket.
+     * @param mail The reply mail.
+     * @param originalMail The original mail.
+     * @return The existing ticket for the original mail.
      */
     @Transactional
     fun attachReplyMail(mail: Mail, originalMail: Mail): SupportTicket {
@@ -70,6 +95,9 @@ class SupportTicketLifecycleService(
         return ticketRepository.save(ticket)
     }
 
+    /**
+     * Marks the ticket as waiting for customer response after sending an external reply.
+     */
     @Transactional
     fun markWaitingForCustomer(mail: Mail) {
         val ticket = mail.ticket ?: return
@@ -95,6 +123,9 @@ class SupportTicketLifecycleService(
         }
     }
 
+    /**
+     * Enriches the ticket with subject, requester email, and requester name from the mail if they are not already set.
+     */
     private fun enrichTicketFromMail(ticket: SupportTicket, mail: Mail) {
         if (ticket.subject.isBlank()) {
             ticket.subject = supportTicketService.removeTicketPrefix(mail.subject)
@@ -104,6 +135,16 @@ class SupportTicketLifecycleService(
         }
         if (ticket.requesterName == null) {
             ticket.requesterName = mail.externalSenderName
+        }
+        // For internal mails, use the sender's name and email if available
+        if (mail.deliveryMode == MailDeliveryMode.INTERNAL) {
+            val sender = mail.sender
+            if (ticket.requesterEmail == null) {
+                ticket.requesterEmail = sender?.email
+            }
+            if (ticket.requesterName == null) {
+                ticket.requesterName = sender?.let { "${it.firstName} ${it.lastName}".trim() }
+            }
         }
     }
 }

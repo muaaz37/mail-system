@@ -47,7 +47,9 @@ class MailService(
      * Returns all sent mails created by the given user.
      */
     fun getAllSentUserMails(user: User): List<Mail> {
-        return mailRepository.findAllBySender(user).toList().filter { mail -> mail.status == MailStatus.SENT }
+        return mailRepository.findAllBySender(user)
+            .filter { mail -> mail.status == MailStatus.SENT }
+            .sortedByDescending { mail -> mail.sentAt ?: mail.createdAt }
     }
 
     /**
@@ -88,6 +90,8 @@ class MailService(
         val sentMail = mailRepository.save(mail)
         if (sentMail.deliveryMode == MailDeliveryMode.EXTERNAL) {
             supportTicketLifecycleService.markWaitingForCustomer(sentMail)
+        } else {
+            supportTicketLifecycleService.attachInternalMail(sentMail)
         }
         return sentMail
     }

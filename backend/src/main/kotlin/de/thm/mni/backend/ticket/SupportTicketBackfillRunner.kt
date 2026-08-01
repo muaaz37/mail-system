@@ -27,8 +27,20 @@ class SupportTicketBackfillRunner(
             mailRepository.save(mail)
         }
 
-        if (supportMailsWithoutTicket.isNotEmpty()) {
-            logger.info("Backfilled {} support tickets for existing imported mails.", supportMailsWithoutTicket.size)
+        // Backfill internal mails without tickets
+        val internalMailsWithoutTicket = mailRepository.findAllByStatus(MailStatus.SENT)
+            .filter { mail -> mail.deliveryMode == MailDeliveryMode.INTERNAL && mail.ticket == null }
+
+        // if there are internal mails without tickets, create a ticket for them
+        internalMailsWithoutTicket.forEach { mail ->
+            ticketLifecycleService.attachInternalMail(mail)
+            mailRepository.save(mail)
+        }
+
+        // Log the number of backfilled tickets
+        val backfilledTicketCount = supportMailsWithoutTicket.size + internalMailsWithoutTicket.size
+        if (backfilledTicketCount > 0) {
+            logger.info("Backfilled {} tickets for existing mails.", backfilledTicketCount)
         }
     }
 }
