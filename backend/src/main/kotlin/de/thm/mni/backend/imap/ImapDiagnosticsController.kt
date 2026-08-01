@@ -14,6 +14,7 @@ import org.springframework.http.MediaType
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
@@ -54,7 +55,7 @@ class ImapDiagnosticsController(
     /**
      * Starts an immediate import run for unread messages.
      */
-    @GetMapping("/import")
+    @PostMapping("/import")
     @Operation(operationId = "importUnreadImapMails", summary = "Import unread mailbox messages", description = "Triggers an immediate import from the configured support mailbox.")
     @ApiResponse(responseCode = "200", description = "Import completed and imported mails returned successfully.")
     fun importMails(@AuthenticationPrincipal jwt: Jwt): List<MailDTO> {
