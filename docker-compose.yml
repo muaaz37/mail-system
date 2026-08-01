@@ -69,7 +69,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget --quiet --output-document=/dev/null http://localhost:$${SERVER_PORT:-8080}/api/v3/api-docs",
+          "wget --quiet --spider http://localhost:$${SERVER_PORT:-8080}/api/swagger-ui/index.html",
         ]
       interval: 5s
       timeout: 5s
@@ -111,14 +111,20 @@ services:
     image: mail-system-keycloak
     restart: unless-stopped
     command: ["start-dev", "--import-realm"]
+    depends_on:
+      keycloak-database:
+        condition: service_healthy
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD must be set}
       KC_HEALTH_ENABLED: "true"   # enable health check endpoint
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-database:5432/${KEYCLOAK_DB_NAME:-keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
     ports:
       - "${KEYCLOAK_HOST_PORT:-9080}:8080"
     volumes:
-      - keycloak_data:/opt/keycloak/data
       - ./keycloak/realm-mail-support.json:/opt/keycloak/data/import/realm-mail-support.json:ro
     healthcheck:
       test:
@@ -131,7 +137,22 @@ services:
       retries: 30
       start_period: 90s
 
+  keycloak-database:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME:-keycloak}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER:-keycloak}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER:-keycloak} -d ${KEYCLOAK_DB_NAME:-keycloak}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   db_data:
   seaweedfs_data:
-  keycloak_data:
+  keycloak_db_data:
