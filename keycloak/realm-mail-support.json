@@ -55,6 +55,66 @@
           "temporary": false
         }
       ]
+    },
+    {
+      "username": "svardey1@example.com",
+      "email": "svardey1@example.com",
+      "firstName": "Sanson",
+      "lastName": "Vardey",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "123456",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "jpoe@example.uk",
+      "email": "jpoe@example.uk",
+      "firstName": "Jami",
+      "lastName": "Poe",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "123456",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "tianno3@example.com",
+      "email": "tianno3@example.com",
+      "firstName": "Trent",
+      "lastName": "Ianno",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "123456",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "araisbeck4@example.com",
+      "email": "araisbeck4@example.com",
+      "firstName": "Alikee",
+      "lastName": "Raisbeck",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "123456",
+          "temporary": false
+        }
+      ]
     }
   ]
 }
