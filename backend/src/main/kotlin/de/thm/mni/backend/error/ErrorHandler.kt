@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.web.HttpMediaTypeNotSupportedException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -108,6 +109,16 @@ class ErrorHandler {
     }
 
     /**
+     * Reports multipart parts with an unsupported content type as a client error.
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException::class)
+    fun handleUnsupportedMediaType(err: HttpMediaTypeNotSupportedException): ResponseEntity<AppError> {
+        log.warn("Unsupported media type: {}", err.message)
+        val error = AppError(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), UNSUPPORTED_MEDIA_TYPE_MESSAGE)
+        return ResponseEntity<AppError>(error, HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+    }
+
+    /**
      * Handles SMTP or attachment failures while keeping the draft available for retry.
      */
     @ExceptionHandler(MailSendFailedException::class)
@@ -146,6 +157,7 @@ class ErrorHandler {
         const val INVALID_REQUEST_BODY_MESSAGE = "Invalid request body."
         const val ATTACHMENT_TOO_LARGE_MESSAGE = "Attachment is too large. Maximum file size is 10 MB."
         const val ATTACHMENT_UPLOAD_FAILED_MESSAGE = "Attachment upload could not be processed."
+        const val UNSUPPORTED_MEDIA_TYPE_MESSAGE = "The request contains an unsupported content type."
         const val ATTACHMENT_STORAGE_FAILED_MESSAGE = "Attachment storage is currently unavailable."
         const val ATTACHMENT_NOT_FOUND_MESSAGE = "Attachment was not found."
         const val UNEXPECTED_ERROR_MESSAGE = "Unexpected server error. Please try again later."
