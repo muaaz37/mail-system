@@ -9,8 +9,10 @@ services:
     ports:
       - "${MAIL_CLIENT_HOST_PORT:-8081}:80"
     depends_on:
-      - mail-server
-      - keycloak
+      mail-server:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
 
   mail-server:
     build:
@@ -23,7 +25,7 @@ services:
       seaweedfs:
         condition: service_started
       keycloak:
-        condition: service_started
+        condition: service_healthy
     expose:
       - "${SERVER_PORT:-8080}"
     environment:
@@ -44,7 +46,7 @@ services:
       STORAGE_S3_INITIALIZE_BUCKET: ${STORAGE_S3_INITIALIZE_BUCKET:-true}
       APP_NAME: ${APP_NAME:-mail-system}
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:?KEYCLOAK_ISSUER_URI must be set}
-      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/mail-support/protocol/openid-connect/certs
+      KEYCLOAK_JWK_SET_URI: ${KEYCLOAK_JWK_SET_URI:?KEYCLOAK_JWK_SET_URI must be set}
       MAIL_SMTP_HOST: ${MAIL_SMTP_HOST:?MAIL_SMTP_HOST must be set}
       MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-465}
       MAIL_SMTP_USERNAME: "${MAIL_SMTP_USERNAME:-}"
@@ -63,6 +65,16 @@ services:
 
       MAIL_POLLING_INTERVAL_MS: ${MAIL_POLLING_INTERVAL_MS:-60000}
       SUPPORT_MAIL_ADDRESS: ${SUPPORT_MAIL_ADDRESS:?SUPPORT_MAIL_ADDRESS must be set}
+    healthcheck: # check if server is up and running
+      test:
+        [
+          "CMD-SHELL",
+          "wget --quiet --output-document=/dev/null http://localhost:$${SERVER_PORT:-8080}/api/v3/api-docs",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
 
   database:
     image: postgres:16
@@ -93,17 +105,31 @@ services:
       - seaweedfs_data:/data
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.6.3
+    build:
+      context: ./keycloak
+      dockerfile: Dockerfile
+    image: mail-system-keycloak
     restart: unless-stopped
     command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD must be set}
+      KC_HEALTH_ENABLED: "true"   # enable health check endpoint
     ports:
       - "${KEYCLOAK_HOST_PORT:-9080}:8080"
     volumes:
       - keycloak_data:/opt/keycloak/data
       - ./keycloak/realm-mail-support.json:/opt/keycloak/data/import/realm-mail-support.json:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "{ printf 'HEAD /health/ready HTTP/1.0\\r\\n\\r\\n' >&0; grep 'HTTP/1.0 200'; } 0<>/dev/tcp/127.0.0.1/9000",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
 
 volumes:
   db_data:
