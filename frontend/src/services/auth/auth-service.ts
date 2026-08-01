@@ -70,8 +70,8 @@ export class AuthService {
         return;
       }
 
-      this.oauthService.setupAutomaticSilentRefresh();
       await this.loadCurrentUser();
+      this.oauthService.setupAutomaticSilentRefresh();
     } catch (error) {
       // A stale or invalid session must not prevent the application from rendering.
       this.currentUser = null;
