@@ -7,12 +7,21 @@ services:
     environment:
       SERVER_PORT: ${SERVER_PORT:-8080}
     ports:
-      - "${MAIL_CLIENT_HOST_PORT:-8081}:80"
+      - "${MAIL_CLIENT_HOST_PORT:-8081}:8080"
     depends_on:
       mail-server:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+      - /data:rw,noexec,nosuid,size=16m,mode=1777
+      - /config:rw,noexec,nosuid,size=16m,mode=1777
 
   mail-server:
     build:
@@ -75,9 +84,17 @@ services:
       timeout: 5s
       retries: 30
       start_period: 120s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
 
   database:
     image: postgres:16
+    user: postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
@@ -90,9 +107,18 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m,mode=1777
+      - /var/run/postgresql:rw,noexec,nosuid,size=16m,mode=1777
 
   seaweedfs:
     image: chrislusf/seaweedfs:4.38
+    user: seaweed
     restart: unless-stopped
     command: "server -s3 -dir=/data"
     environment:
@@ -103,6 +129,13 @@ services:
       - "8333"
     volumes:
       - seaweedfs_data:/data
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
 
   keycloak:
     build:
@@ -110,7 +143,12 @@ services:
       dockerfile: Dockerfile
     image: mail-system-keycloak
     restart: unless-stopped
-    command: ["start-dev", "--import-realm"]
+    command:
+      - start
+      - --optimized
+      - --import-realm
+      - --http-enabled=true
+      - --hostname-strict=false
     depends_on:
       keycloak-database:
         condition: service_healthy
@@ -136,9 +174,18 @@ services:
       timeout: 5s
       retries: 30
       start_period: 90s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m,mode=1777
+      - /opt/keycloak/data/tmp:rw,noexec,nosuid,size=64m,mode=1777
 
   keycloak-database:
     image: postgres:16
+    user: postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${KEYCLOAK_DB_NAME:-keycloak}
@@ -151,6 +198,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m,mode=1777
+      - /var/run/postgresql:rw,noexec,nosuid,size=16m,mode=1777
 
 volumes:
   db_data:
