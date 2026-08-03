@@ -1,4 +1,49 @@
 services:
+  proxy:
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    image: mail-system-waf
+    restart: unless-stopped
+    environment:
+      SERVER_NAME: localhost
+      PORT: "8080"
+      SSL_PORT: "8443"
+      NGINX_ALWAYS_TLS_REDIRECT: "on"
+      SSL_CERT_FILE: /run/secrets/proxy_certificate
+      SSL_CERT_KEY_FILE: /run/secrets/proxy_private_key
+      MODSEC_RULE_ENGINE: "On"
+      MODSEC_AUDIT_ENGINE: "RelevantOnly"
+      MODSEC_AUDIT_LOG: /dev/stdout
+      MODSEC_AUDIT_LOG_FORMAT: JSON
+      BLOCKING_PARANOIA: "2"
+      DETECTION_PARANOIA: "3"
+      ALLOWED_METHODS: "GET HEAD POST PUT PATCH DELETE OPTIONS"
+      MODSEC_REQ_BODY_ACCESS: "On"
+      MODSEC_REQ_BODY_LIMIT: "26214400"           # 25MiB
+      MODSEC_REQ_BODY_NOFILES_LIMIT: "1048576"    # 1MiB
+    ports:
+      - "80:8080"
+      - "443:8443"
+    depends_on:
+      mail-client:
+        condition: service_healthy
+      mail-server:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    secrets:
+      - proxy_certificate
+      - proxy_private_key
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy-client
+      - proxy-server
+      - proxy-keycloak
+
   mail-client:
     build:
       context: ./frontend
@@ -6,13 +51,21 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: ${SERVER_PORT:-8080}
-    ports:
-      - "${MAIL_CLIENT_HOST_PORT:-8081}:8080"
     depends_on:
       mail-server:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --quiet --spider http://localhost:8080/app/ || exit 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
     cap_drop:
       - ALL
     security_opt:
@@ -23,7 +76,7 @@ services:
       - /data:rw,noexec,nosuid,size=16m,mode=1777
       - /config:rw,noexec,nosuid,size=16m,mode=1777
     networks:
-      - client-server
+      - proxy-client
 
   mail-server:
     build:
@@ -94,7 +147,7 @@ services:
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m,mode=1777
     networks:
-      - client-server
+      - proxy-server
       - server-database
       - server-storage
       - server-keycloak
@@ -159,7 +212,9 @@ services:
       - --optimized
       - --import-realm
       - --http-enabled=true
-      - --hostname-strict=false
+      - --proxy-headers=xforwarded
+      - --hostname=https://localhost
+      - --hostname-strict=true
     depends_on:
       keycloak-database:
         condition: service_healthy
@@ -171,8 +226,6 @@ services:
       KC_DB_URL: jdbc:postgresql://keycloak-database:5432/${KEYCLOAK_DB_NAME:-keycloak}
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
-    ports:
-      - "${KEYCLOAK_HOST_PORT:-9080}:8080"
     volumes:
       - ./keycloak/realm-mail-support.json:/opt/keycloak/data/import/realm-mail-support.json:ro
     healthcheck:
@@ -194,6 +247,7 @@ services:
       - /tmp:rw,noexec,nosuid,size=128m,mode=1777
       - /opt/keycloak/data/tmp:rw,noexec,nosuid,size=64m,mode=1777
     networks:
+      - proxy-keycloak
       - server-keycloak
       - keycloak-database
 
@@ -229,11 +283,24 @@ volumes:
   keycloak_db_data:
 
 networks:
-  client-server:
+  proxy-client:
+  proxy-server:
+    internal: true
+  proxy-keycloak:
+    internal: true
+
   server-database:
     internal: true
+  keycloak-database:
+    internal: true
+
   server-storage:
     internal: true
   server-keycloak:
-  keycloak-database:
     internal: true
+
+secrets:
+  proxy_certificate:
+    file: ./proxy/cert/proxy.crt
+  proxy_private_key:
+    file: ./proxy/cert/proxy.key
