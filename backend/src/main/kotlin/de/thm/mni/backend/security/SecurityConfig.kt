@@ -50,6 +50,7 @@ class SecurityConfig {
             }
             .authorizeHttpRequests {
                 it.requestMatchers(
+                    "/api/health",
                     "/api/v3/api-docs",
                     "/api/v3/api-docs/**",
                     "/api/swagger-ui",

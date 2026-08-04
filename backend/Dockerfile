@@ -28,4 +28,8 @@ USER backend
 
 EXPOSE 8080
 
+# Verify that the backend can process HTTP requests.
+HEALTHCHECK --interval=5s --timeout=5s --start-period=120s --retries=30 \
+    CMD wget --quiet --spider "http://localhost:${SERVER_PORT:-8080}/api/health" || exit 1
+
 CMD ["/app/bin/backend"]
