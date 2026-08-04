@@ -27,13 +27,14 @@ class SecurityConfig {
                 it.configurationSource {
                     CorsConfiguration().apply {
                         allowedOrigins = listOf(
-                            "http://localhost:8081",
+                            "https://localhost",
                             "http://localhost:4200"
                         )
                         allowedMethods = listOf(
                             "GET",
                             "POST",
                             "PUT",
+                            "PATCH",
                             "DELETE",
                             "OPTIONS"
                         )
