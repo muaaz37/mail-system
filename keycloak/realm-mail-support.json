@@ -2,7 +2,7 @@
   "realm": "mail-support",
   "enabled": true,
   "displayName": "Mail Support System",
-  "registrationAllowed": true,
+  "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
