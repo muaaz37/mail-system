@@ -19,7 +19,7 @@ services:
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=16m
     networks:
-      - ips-proxy
+      - gateway-waf
 
   proxy:
     build:
@@ -59,7 +59,7 @@ services:
     security_opt:
       - no-new-privileges:true
     networks:
-      - ips-proxy
+      - gateway-waf
       - proxy-client
       - proxy-server
       - proxy-keycloak
@@ -76,16 +76,6 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget --quiet --spider http://localhost:8080/app/ || exit 1",
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 30s
     cap_drop:
       - ALL
     security_opt:
@@ -149,16 +139,6 @@ services:
 
       MAIL_POLLING_INTERVAL_MS: ${MAIL_POLLING_INTERVAL_MS:-60000}
       SUPPORT_MAIL_ADDRESS: ${SUPPORT_MAIL_ADDRESS:?SUPPORT_MAIL_ADDRESS must be set}
-    healthcheck: # check if server is up and running
-      test:
-        [
-          "CMD-SHELL",
-          "wget --quiet --spider http://localhost:$${SERVER_PORT:-8080}/api/swagger-ui/index.html",
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 120s
     cap_drop:
       - ALL
     security_opt:
@@ -249,16 +229,6 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
     volumes:
       - ./keycloak/realm-mail-support.json:/opt/keycloak/data/import/realm-mail-support.json:ro
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "{ printf 'HEAD /health/ready HTTP/1.0\\r\\n\\r\\n' >&0; grep 'HTTP/1.0 200'; } 0<>/dev/tcp/127.0.0.1/9000",
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 90s
     cap_drop:
       - ALL
     security_opt:
@@ -304,25 +274,34 @@ volumes:
   keycloak_db_data:
 
 networks:
-  ips-proxy:
+  # Public edge network between the HAProxy gateway and the ModSecurity WAF
+  gateway-waf:
+
+  # Isolated connection between the WAF and the frontend.
   proxy-client:
     internal: true
+  # Isolated connection between the WAF and the backend API.
   proxy-server:
     internal: true
+  # Isolated connection between the WAF and Keycloak.
   proxy-keycloak:
     internal: true
 
+  # Isolated connection between the backend and its PostgreSQL database.
   server-database:
     internal: true
+  # Isolated connection between Keycloak and its PostgreSQL database.
   keycloak-database:
     internal: true
 
+  # Isolated connection between the backend and SeaweedFS.
   server-storage:
     internal: true
+  # Isolated connection used by the backend to access Keycloak.
   server-keycloak:
     internal: true
 
-  # Allows only the mail server to contact external SMTP/IMAP servers
+  # Spring Boot API to external SMTP and IMAP services
   mail-egress:
 
 secrets:

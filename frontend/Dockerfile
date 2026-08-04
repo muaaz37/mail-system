@@ -25,4 +25,8 @@ RUN chown -R caddy:caddy /srv /etc/caddy
 
 USER caddy
 
+# Verify that the frontend can serve the Angular application.
+HEALTHCHECK --interval=5s --timeout=5s --start-period=30s --retries=30 \
+    CMD wget --quiet --spider http://localhost:8080/app/ || exit 1
+
 EXPOSE 8080
