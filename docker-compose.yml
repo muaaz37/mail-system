@@ -1,4 +1,26 @@
 services:
+  ips:
+    build:
+      context: ./ips
+      dockerfile: Dockerfile
+    image: mail-system-ips
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+      - "443:8443"
+    depends_on:
+      proxy:
+        condition: service_healthy
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    networks:
+      - ips-proxy
+
   proxy:
     build:
       context: ./proxy
@@ -22,9 +44,6 @@ services:
       MODSEC_REQ_BODY_ACCESS: "On"
       MODSEC_REQ_BODY_LIMIT: "26214400"           # 25MiB
       MODSEC_REQ_BODY_NOFILES_LIMIT: "1048576"    # 1MiB
-    ports:
-      - "80:8080"
-      - "443:8443"
     depends_on:
       mail-client:
         condition: service_healthy
@@ -40,6 +59,7 @@ services:
     security_opt:
       - no-new-privileges:true
     networks:
+      - ips-proxy
       - proxy-client
       - proxy-server
       - proxy-keycloak
@@ -151,6 +171,7 @@ services:
       - server-database
       - server-storage
       - server-keycloak
+      - mail-egress
 
   database:
     image: postgres:16
@@ -283,7 +304,9 @@ volumes:
   keycloak_db_data:
 
 networks:
+  ips-proxy:
   proxy-client:
+    internal: true
   proxy-server:
     internal: true
   proxy-keycloak:
@@ -298,6 +321,9 @@ networks:
     internal: true
   server-keycloak:
     internal: true
+
+  # Allows only the mail server to contact external SMTP/IMAP servers
+  mail-egress:
 
 secrets:
   proxy_certificate:
