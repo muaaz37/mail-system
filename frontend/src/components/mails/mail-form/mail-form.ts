@@ -86,6 +86,15 @@ export class MailForm implements OnInit, OnChanges {
   protected readonly MailDeliveryMode = MailDeliveryMode;
 
   /**
+   * Returns the immutable ticket number shown next to the editable reply subject.
+   *
+   * @returns Ticket number for support replies or null for regular mails.
+   */
+  protected replyTicketNumber(): string | null {
+    return this.replyTemplate?.ticketNumber ?? null;
+  }
+
+  /**
    * Loads selectable internal recipients and initializes the form state.
    */
   ngOnInit(): void {
@@ -204,7 +213,7 @@ export class MailForm implements OnInit, OnChanges {
     }
 
     this.mailForm.patchValue({
-      subject: this.replyTemplate.subject,
+      subject: this.editableReplySubject(this.replyTemplate.subject),
       content: '',
       deliveryMode: MailDeliveryMode.EXTERNAL,
       externalTo: this.replyTemplate.externalTo.join(', '),
@@ -324,7 +333,7 @@ export class MailForm implements OnInit, OnChanges {
    */
   private buildMailData(): CreateMail {
     return {
-      subject: this.mailForm.controls.subject.value || '',
+      subject: this.completeSubject(),
       content: this.mailForm.controls.content.value || '',
       deliveryMode: this.deliveryMode(),
       toIds: this.deliveryMode() === MailDeliveryMode.INTERNAL ? this.selectedToUsers() : [],
@@ -365,6 +374,33 @@ export class MailForm implements OnInit, OnChanges {
 
     // The backend replaces the complete attachment set, so retained files must be sent again.
     return [...newAttachments, ...existingAttachments];
+  }
+
+  /**
+   * Normalizes the editable part to exactly one reply prefix and no ticket number.
+   *
+   * @param subject Subject value from a reply template or form input.
+   * @returns Editable subject without the immutable ticket prefix.
+   */
+  private editableReplySubject(subject: string): string {
+    if (!this.replyTemplate) {
+      return subject;
+    }
+
+    const withoutTickets = subject.replace(/\[?\s*TICKET-\d+\s*]?/gi, ' ').trim();
+    const baseSubject = withoutTickets.replace(/^(?:\s*Re\s*:\s*)+/i, '').trim();
+    return `Re: ${baseSubject}`.trim();
+  }
+
+  /**
+   * Restores the immutable ticket prefix before the reply is sent to the backend.
+   *
+   * @returns Full subject including the support ticket number for replies.
+   */
+  private completeSubject(): string {
+    const subject = this.mailForm.controls.subject.value?.trim() ?? '';
+    const ticketNumber = this.replyTicketNumber();
+    return ticketNumber ? `[${ticketNumber}] ${this.editableReplySubject(subject)}`.trim() : subject;
   }
 
   /**
@@ -572,7 +608,7 @@ export class MailForm implements OnInit, OnChanges {
     }
 
     this.mailForm.reset({
-      subject: this.replyTemplate?.subject ?? '',
+      subject: this.replyTemplate ? this.editableReplySubject(this.replyTemplate.subject) : '',
       content: '',
       deliveryMode: this.replyTemplate ? MailDeliveryMode.EXTERNAL : MailDeliveryMode.INTERNAL,
       externalTo: this.replyTemplate?.externalTo.join(', ') ?? '',

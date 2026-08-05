@@ -40,22 +40,20 @@ class SupportTicketService(private val mailRepository: MailRepository) {
      * Builds the subject used when answering an imported support mail.
      */
     fun buildReplySubject(originalSubject: String, ticketNumber: String): String {
-        val replySubject = if (originalSubject.startsWith(REPLY_PREFIX, ignoreCase = true)) {
-            originalSubject
-        } else {
-            "$REPLY_PREFIX $originalSubject"
-        }
-        return prependTicketIfMissing(replySubject, ticketNumber)
+        return normalizeReplySubject(originalSubject, ticketNumber)
     }
 
     /**
-     * Adds the ticket prefix only when the subject does not already contain one.
+     * Produces the canonical reply subject with exactly one ticket number and one reply prefix.
      */
     fun prependTicketIfMissing(subject: String, ticketNumber: String): String {
-        if (extractTicketNumber(subject) != null) {
-            return subject
-        }
-        return "[$ticketNumber] $subject".trim()
+        return normalizeReplySubject(subject, ticketNumber)
+    }
+
+    private fun normalizeReplySubject(subject: String, ticketNumber: String): String {
+        val subjectWithoutTickets = subject.replace(TICKET_REFERENCE_PATTERN, " ").trim()
+        val baseSubject = subjectWithoutTickets.replace(LEADING_REPLY_PREFIXES_PATTERN, "").trim()
+        return "[$ticketNumber] $REPLY_PREFIX $baseSubject".trim()
     }
 
     /**
@@ -81,5 +79,7 @@ class SupportTicketService(private val mailRepository: MailRepository) {
         const val TICKET_DIGITS = 6
         const val TICKET_BOUND = 1_000_000
         val TICKET_PATTERN = Regex("\\b(TICKET-\\d{$TICKET_DIGITS})\\b", RegexOption.IGNORE_CASE)
+        val TICKET_REFERENCE_PATTERN = Regex("\\[?\\s*TICKET-\\d{$TICKET_DIGITS}\\s*]?", RegexOption.IGNORE_CASE)
+        val LEADING_REPLY_PREFIXES_PATTERN = Regex("^(?:\\s*Re\\s*:\\s*)+", RegexOption.IGNORE_CASE)
     }
 }

@@ -52,14 +52,21 @@
 
           <div class="flex flex-col gap-2">
             <label for="subject" class="text-sm font-semibold text-slate-700">Subject</label>
-            <input
-              id="subject"
-              type="text"
-              pInputText
-              formControlName="subject"
-              class="w-full"
-              placeholder="Enter email subject"
-            />
+            <div class="flex items-center overflow-hidden rounded-md border border-gray-300 bg-white focus-within:border-slate-500">
+              @if (replyTicketNumber()) {
+                <span class="shrink-0 border-r border-gray-300 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+                  [{{ replyTicketNumber() }}]
+                </span>
+              }
+              <input
+                id="subject"
+                type="text"
+                pInputText
+                formControlName="subject"
+                class="w-full border-0"
+                placeholder="Enter email subject"
+              />
+            </div>
             @if (mailForm.get('subject')?.invalid && mailForm.get('subject')?.touched) {
               <small class="mt-1 text-sm text-red-600">
                 Subject is required and must be between 1 and 120 characters
