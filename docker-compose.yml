@@ -1,3 +1,14 @@
+# security restrictions for all containers
+x-container-security: &container-security
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+# Extended restrictions for containers that support a read-only root filesystem
+x-read-only-container: &read-only-container
+  <<: *container-security
+  read_only: true
+
 services:
   ips:
     build:
@@ -11,11 +22,7 @@ services:
     depends_on:
       proxy:
         condition: service_healthy
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
+    <<: *read-only-container
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=16m
     networks:
@@ -54,10 +61,7 @@ services:
     secrets:
       - proxy_certificate
       - proxy_private_key
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
+    <<: *container-security
     networks:
       - gateway-waf
       - proxy-client
@@ -76,11 +80,7 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
+    <<: *read-only-container
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=16m
       - /data:rw,noexec,nosuid,size=16m,mode=1777
@@ -139,11 +139,7 @@ services:
 
       MAIL_POLLING_INTERVAL_MS: ${MAIL_POLLING_INTERVAL_MS:-60000}
       SUPPORT_MAIL_ADDRESS: ${SUPPORT_MAIL_ADDRESS:?SUPPORT_MAIL_ADDRESS must be set}
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
+    <<: *read-only-container
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m,mode=1777
     networks:
@@ -168,11 +164,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
+    <<: *read-only-container
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=32m,mode=1777
       - /var/run/postgresql:rw,noexec,nosuid,size=16m,mode=1777
@@ -192,11 +184,7 @@ services:
       - "8333"
     volumes:
       - seaweedfs_data:/data
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
+    <<: *read-only-container
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m,mode=1777
     networks:
@@ -229,11 +217,7 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
     volumes:
       - ./keycloak/realm-mail-support.json:/opt/keycloak/data/import/realm-mail-support.json:ro
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
+    <<: *read-only-container
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=128m,mode=1777
       - /opt/keycloak/data/tmp:rw,noexec,nosuid,size=64m,mode=1777
@@ -257,11 +241,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
+    <<: *read-only-container
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=32m,mode=1777
       - /var/run/postgresql:rw,noexec,nosuid,size=16m,mode=1777
