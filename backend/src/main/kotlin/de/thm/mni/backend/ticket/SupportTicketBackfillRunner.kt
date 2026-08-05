@@ -19,6 +19,8 @@ class SupportTicketBackfillRunner(
     private val logger = LoggerFactory.getLogger(SupportTicketBackfillRunner::class.java)
 
     override fun run(args: ApplicationArguments) {
+        // Tickets represent external support conversations only. Internal mails are
+        // displayed separately by the client and must never be backfilled as tickets.
         val supportMailsWithoutTicket = mailRepository.findAllByStatus(MailStatus.RECEIVED)
             .filter { mail -> mail.deliveryMode == MailDeliveryMode.EXTERNAL && mail.ticket == null }
 
@@ -27,18 +29,7 @@ class SupportTicketBackfillRunner(
             mailRepository.save(mail)
         }
 
-        // Backfill internal mails without tickets
-        val internalMailsWithoutTicket = mailRepository.findAllByStatus(MailStatus.SENT)
-            .filter { mail -> mail.deliveryMode == MailDeliveryMode.INTERNAL && mail.ticket == null }
-
-        // if there are internal mails without tickets, create a ticket for them
-        internalMailsWithoutTicket.forEach { mail ->
-            ticketLifecycleService.attachInternalMail(mail)
-            mailRepository.save(mail)
-        }
-
-        // Log the number of backfilled tickets
-        val backfilledTicketCount = supportMailsWithoutTicket.size + internalMailsWithoutTicket.size
+        val backfilledTicketCount = supportMailsWithoutTicket.size
         if (backfilledTicketCount > 0) {
             logger.info("Backfilled {} tickets for existing mails.", backfilledTicketCount)
         }

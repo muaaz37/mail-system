@@ -52,24 +52,6 @@ class SupportTicketLifecycleService(
     }
 
     /**
-     * Creates an inbox ticket for a successfully sent internal mail.
-     */
-    @Transactional
-    fun attachInternalMail(mail: Mail): SupportTicket {
-        if (mail.status != MailStatus.SENT || mail.deliveryMode != MailDeliveryMode.INTERNAL) {
-            throw InvalidMailRequestException("Only sent internal mails can open internal tickets.")
-        }
-
-        val ticket = findOrCreateTicket(mail)
-        ticket.status = SupportTicketStatus.WAITING_FOR_SUPPORT
-        ticket.closedAt = null
-        enrichTicketFromMail(ticket, mail)
-        mail.ticketNumber = ticket.ticketNumber
-        mail.ticket = ticket
-        return ticketRepository.save(ticket)
-    }
-
-    /**
      * Assigns a draft or sent support reply to the existing original ticket.
      * @param mail The reply mail.
      * @param originalMail The original mail.
@@ -135,16 +117,6 @@ class SupportTicketLifecycleService(
         }
         if (ticket.requesterName == null) {
             ticket.requesterName = mail.externalSenderName
-        }
-        // For internal mails, use the sender's name and email if available
-        if (mail.deliveryMode == MailDeliveryMode.INTERNAL) {
-            val sender = mail.sender
-            if (ticket.requesterEmail == null) {
-                ticket.requesterEmail = sender?.email
-            }
-            if (ticket.requesterName == null) {
-                ticket.requesterName = sender?.let { "${it.firstName} ${it.lastName}".trim() }
-            }
         }
     }
 }

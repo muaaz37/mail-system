@@ -88,10 +88,10 @@ class MailService(
 
         mail.status = MailStatus.SENT
         val sentMail = mailRepository.save(mail)
+        // Internal messages stay regular application mails. Only external support
+        // replies participate in the support-ticket lifecycle.
         if (sentMail.deliveryMode == MailDeliveryMode.EXTERNAL) {
             supportTicketLifecycleService.markWaitingForCustomer(sentMail)
-        } else {
-            supportTicketLifecycleService.attachInternalMail(sentMail)
         }
         return sentMail
     }

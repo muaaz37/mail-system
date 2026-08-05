@@ -5,14 +5,33 @@ import { MessageService } from 'primeng/api';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
 import { Toast } from 'primeng/toast';
+import { forkJoin, of } from 'rxjs';
+
+import { MailsService } from '../../../services/mails/mails-service';
 import { TicketsService } from '../../../services/tickets/tickets-service';
+import { Mail, MailDeliveryMode } from '../../../types/mails';
 import {
   SupportTicket,
   SupportTicketPriority,
   SupportTicketStatus,
   TicketView,
 } from '../../../types/tickets';
+import { User } from '../../../types/user';
 import { readApiErrorMessage } from '../../../utils/api-error-message';
+
+interface TicketListItem {
+  id: string;
+  type: 'ticket' | 'internal-mail';
+  subject: string;
+  requesterName: string;
+  lastActivityAt: string;
+  mailCount: number;
+  hasUnreadActivity: boolean;
+  ticketNumber?: string;
+  status?: SupportTicketStatus;
+  priority?: SupportTicketPriority;
+  assignedTo?: User | null;
+}
 
 @Component({
   selector: 'app-tickets-page',
@@ -23,30 +42,38 @@ import { readApiErrorMessage } from '../../../utils/api-error-message';
 export class TicketsPage implements OnInit {
   protected view: TicketView = 'open';
   protected title = 'Open tickets';
-  protected description = 'Incoming messages that still need a team response or triage.';
-  protected metricLabel = 'open tickets';
-  protected tickets = signal<SupportTicket[]>([]);
+  protected description =
+    'External support tickets and internal messages that need attention.';
+  protected metricLabel = 'open items';
+
+  protected items = signal<TicketListItem[]>([]);
   protected isLoading = signal(true);
 
   private ticketsService = inject(TicketsService);
+  private mailsService = inject(MailsService);
   private messageService = inject(MessageService);
   private router = inject(Router);
 
   /**
-   * Configures the queue view from the current route and loads its tickets.
+   * Configures the queue view from the current route and loads its messages.
    */
   ngOnInit(): void {
     this.configureFromPath();
-    this.loadTickets();
+    this.loadItems();
   }
 
   /**
-   * Opens the detail view for a selected support ticket.
+   * Opens the detail view for a selected ticket or internal message.
    *
-   * @param ticket Ticket selected from the queue list.
+   * @param item Queue item selected from the overview.
    */
-  openTicket(ticket: SupportTicket): void {
-    this.router.navigate(['/mails/tickets', ticket.id]);
+  protected openItem(item: TicketListItem): void {
+    if (item.type === 'ticket') {
+      this.router.navigate(['/mails/tickets', item.id]);
+      return;
+    }
+
+    this.router.navigate(['/mails', item.id]);
   }
 
   /**
@@ -55,39 +82,36 @@ export class TicketsPage implements OnInit {
    * @param dateString ISO timestamp returned by the backend.
    * @returns User-facing short date label.
    */
-  formatDate(dateString: string): string {
+  protected formatDate(dateString: string): string {
     const date = new Date(dateString);
     const today = new Date();
 
     if (date.toDateString() === today.toDateString()) {
-      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
     }
 
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-
-  /**
-   * Builds the requester label shown on ticket cards.
-   *
-   * @param ticket Ticket returned by the backend.
-   * @returns Requester name, email or fallback text.
-   */
-  requester(ticket: SupportTicket): string {
-    return ticket.requesterName || ticket.requesterEmail || 'Unknown sender';
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
   }
 
   /**
    * Builds the assignment label shown on ticket cards.
    *
-   * @param ticket Ticket returned by the backend.
+   * @param item Ticket queue item.
    * @returns Assignment text for the current ticket.
    */
-  assigneeLabel(ticket: SupportTicket): string {
-    if (!ticket.assignedTo) {
+  protected assigneeLabel(item: TicketListItem): string {
+    if (!item.assignedTo) {
       return 'Unassigned';
     }
 
-    return `Assigned to ${ticket.assignedTo.firstName}`;
+    return `Assigned to ${item.assignedTo.firstName}`;
   }
 
   /**
@@ -96,7 +120,7 @@ export class TicketsPage implements OnInit {
    * @param status Backend ticket status.
    * @returns Display label for the status tag.
    */
-  statusLabel(status: SupportTicketStatus): string {
+  protected statusLabel(status: SupportTicketStatus): string {
     switch (status) {
       case SupportTicketStatus.WAITING_FOR_SUPPORT:
         return 'Waiting for team';
@@ -115,7 +139,7 @@ export class TicketsPage implements OnInit {
    * @param priority Backend priority value.
    * @returns Lowercase priority label.
    */
-  priorityLabel(priority: SupportTicketPriority): string {
+  protected priorityLabel(priority: SupportTicketPriority): string {
     return priority.toLowerCase();
   }
 
@@ -125,7 +149,9 @@ export class TicketsPage implements OnInit {
    * @param status Backend ticket status.
    * @returns Severity value used by the status tag.
    */
-  statusSeverity(status: SupportTicketStatus): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+  protected statusSeverity(
+    status: SupportTicketStatus,
+  ): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     switch (status) {
       case SupportTicketStatus.RESOLVED:
         return 'success';
@@ -144,7 +170,9 @@ export class TicketsPage implements OnInit {
    * @param priority Backend priority value.
    * @returns Severity value used by the priority tag.
    */
-  prioritySeverity(priority: SupportTicketPriority): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+  protected prioritySeverity(
+    priority: SupportTicketPriority,
+  ): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     switch (priority) {
       case SupportTicketPriority.URGENT:
         return 'danger';
@@ -162,10 +190,12 @@ export class TicketsPage implements OnInit {
    */
   private configureFromPath(): void {
     const path = this.router.url;
+
     if (path.includes('/resolved')) {
       this.view = 'resolved';
       this.title = 'Resolved tickets';
-      this.description = 'Closed conversations kept visible for the whole team.';
+      this.description =
+        'Closed conversations kept visible for the whole team.';
       this.metricLabel = 'resolved tickets';
       return;
     }
@@ -173,29 +203,114 @@ export class TicketsPage implements OnInit {
     if (path.includes('/waiting')) {
       this.view = 'waiting';
       this.title = 'Waiting for sender';
-      this.description = 'Tickets where the team has replied and the next response is external.';
+      this.description =
+        'Tickets where the team has replied and the next response is external.';
       this.metricLabel = 'waiting tickets';
     }
   }
 
   /**
-   * Loads tickets for the configured queue view.
+   * Loads support tickets and internal messages for the configured queue view.
    */
-  private loadTickets(): void {
+  private loadItems(): void {
     this.isLoading.set(true);
-    this.ticketsService.getTickets(this.view).subscribe({
-      next: (tickets) => {
-        this.tickets.set(tickets);
+
+    // Internal team messages are regular mails, not customer tickets.
+    const internalMailsRequest =
+      this.view === 'open'
+        ? this.mailsService.getIncomingMails()
+        : of([] as Mail[]);
+
+    forkJoin({
+      tickets: this.ticketsService.getTickets(this.view),
+      mails: internalMailsRequest,
+    }).subscribe({
+      next: ({ tickets, mails }) => {
+        const ticketItems = tickets.map((ticket) =>
+          this.mapTicket(ticket),
+        );
+
+        const internalMailItems = mails
+          .filter(
+            (mail) =>
+              mail.deliveryMode === MailDeliveryMode.INTERNAL,
+          )
+          .map((mail) => this.mapInternalMail(mail));
+
+        const combinedItems = [
+          ...ticketItems,
+          ...internalMailItems,
+        ].sort(
+          (first, second) =>
+            new Date(second.lastActivityAt).getTime() -
+            new Date(first.lastActivityAt).getTime(),
+        );
+
+        this.items.set(combinedItems);
         this.isLoading.set(false);
       },
       error: (err: HttpErrorResponse) => {
         this.messageService.add({
           severity: 'error',
-          summary: 'Failed to Load Tickets',
+          summary: 'Failed to Load Messages',
           detail: readApiErrorMessage(err),
         });
+
         this.isLoading.set(false);
       },
     });
+  }
+
+  /**
+   * Converts a support ticket into the common queue item representation.
+   *
+   * @param ticket Support ticket returned by the backend.
+   * @returns Queue item displayed by the ticket overview.
+   */
+  private mapTicket(ticket: SupportTicket): TicketListItem {
+    return {
+      id: ticket.id,
+      type: 'ticket',
+      ticketNumber: ticket.ticketNumber,
+      subject: ticket.subject,
+      requesterName:
+        ticket.requesterName ||
+        ticket.requesterEmail ||
+        'Unknown sender',
+      status: ticket.status,
+      priority: ticket.priority,
+      assignedTo: ticket.assignedTo,
+      mailCount: ticket.mailCount,
+      hasUnreadActivity: ticket.hasUnreadActivity,
+      lastActivityAt: ticket.lastActivityAt,
+    };
+  }
+
+  /**
+   * Converts an internal mail into the common queue item representation.
+   *
+   * @param mail Internal mail returned by the backend.
+   * @returns Queue item displayed by the open overview.
+   */
+  private mapInternalMail(mail: Mail): TicketListItem {
+    const fullName = mail.sender
+      ? `${mail.sender.firstName} ${mail.sender.lastName}`.trim()
+      : '';
+
+    return {
+      id: mail.id,
+      type: 'internal-mail',
+      subject: mail.subject,
+      requesterName:
+        fullName ||
+        mail.sender?.email ||
+        'Unknown sender',
+      mailCount: 1,
+      hasUnreadActivity: false,
+      lastActivityAt:
+        mail.sentAt ||
+        mail.updatedAt ||
+        mail.createdAt,
+    };
   }
 }
