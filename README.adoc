@@ -7,14 +7,14 @@
 Mail Support System is a full-stack web application for a shared support mailbox with ticket-based mail handling.
 Authenticated support users can work on shared incoming support requests, create and send replies through the configured support mailbox, manage drafts and attachments, and use internal application mail where needed.
 
-The repository contains an Angular frontend, a Kotlin/Spring Boot backend, a Caddy reverse proxy, PostgreSQL, SeaweedFS/S3-compatible attachment storage and a local Keycloak OpenID Connect setup for Docker Compose based evaluation.
+The repository contains an Angular frontend, a Kotlin/Spring Boot backend, a Caddy static web server, an HAProxy/ModSecurity edge gateway, PostgreSQL, SeaweedFS/S3-compatible attachment storage and a local Keycloak OpenID Connect setup for Docker Compose based evaluation.
 
 == System Overview
 
 The system is designed as a split frontend/backend application with externalized identity, mail and attachment storage concerns:
 
 * Angular single-page application served by Caddy under `/app/`.
-* Caddy reverse proxy for `/api/*` requests to the backend service.
+* HAProxy and ModSecurity/Nginx edge gateway that exposes the public HTTP/HTTPS ports and forwards `/api/*` requests to the backend service.
 * Kotlin/Spring Boot REST API for users, mails, tickets, attachments, SMTP sending and IMAP import.
 * PostgreSQL application database for users, mails, ticket state and attachment metadata.
 * SeaweedFS/S3-compatible object storage for uploaded and imported attachment binaries.
@@ -29,7 +29,7 @@ The system is designed as a split frontend/backend application with externalized
 | Area | Behavior
 
 | Authentication
-| Keycloak provides OpenID Connect login and registration. The Angular client uses Authorization Code Flow with PKCE, while the backend validates signed bearer access tokens as an OAuth2 Resource Server. The application does not store user passwords.
+| Keycloak provides OpenID Connect authentication. The Angular client uses Authorization Code Flow with PKCE, while the backend validates signed bearer access tokens as an OAuth2 Resource Server. The application does not store user passwords or expose local registration endpoints.
 
 | Support ticket queues
 | Incoming support mails are grouped into persistent support tickets. Users can view open, waiting and resolved queues, assign or unassign tickets, update priority, resolve tickets and reopen resolved tickets.
@@ -56,10 +56,10 @@ The system is designed as a split frontend/backend application with externalized
 | Imported messages are stored as `RECEIVED`, keep external sender metadata, persist attachments, skip duplicate `Message-ID` values and are marked as read after successful handling. App-generated SMTP messages are marked with an origin header and ignored during IMAP import.
 
 | OpenAPI
-| The backend exposes a generated OpenAPI document and Swagger UI through the Caddy `/api` path. Protected operations document JWT bearer authentication.
+| The backend exposes a generated OpenAPI document and Swagger UI through the HTTPS edge gateway under `/api`. Protected operations document JWT bearer authentication.
 
 | Local container runtime
-| Docker Compose starts frontend/Caddy, backend, PostgreSQL, SeaweedFS, Keycloak and the Keycloak database with persistent Docker volumes for application, object-storage and identity-provider state.
+| Docker Compose starts the HAProxy/ModSecurity edge, frontend/Caddy, backend, PostgreSQL, SeaweedFS, Keycloak and the Keycloak database with persistent Docker volumes for application, object-storage and identity-provider state.
 |===
 
 == Scope
@@ -83,6 +83,10 @@ The preferred architecture documentation uses a logical C4 model. The Mail Suppo
 
 | Support Web Application
 | Serves the Angular UI under `/app/`, manages browser routes and sends authenticated API calls through `/api`.
+| Inside Mail Support System
+
+| Edge Gateway
+| Exposes the public HTTP/HTTPS ports, redirects HTTP to HTTPS, applies ModSecurity rules and forwards `/app`, `/api` and Keycloak paths to internal services.
 | Inside Mail Support System
 
 | Backend API
@@ -114,7 +118,11 @@ The preferred architecture documentation uses a logical C4 model. The Mail Suppo
 
 | Support Web Application
 | Angular 21, TypeScript, PrimeNG, Tailwind CSS, Caddy 2
-| Public HTTP entry point under `/app/`; reverse proxy for `/api/*`; browser redirects to Keycloak.
+| Internal web endpoint for `/app/`; browser redirects to Keycloak through the public edge gateway.
+
+| Edge Gateway
+| HAProxy and ModSecurity/Nginx
+| Public HTTP/HTTPS entry point; forwards `/app/` to Caddy, `/api/*` to the backend and `/realms/*`, `/resources/*`, `/admin/*` to Keycloak.
 
 | Backend API
 | Kotlin 2.2, Java 21, Spring Boot 4, Spring Security OAuth2 Resource Server, Spring Data JPA, Spring Mail, AWS SDK S3
@@ -149,7 +157,7 @@ The backend is structured around vertical business responsibilities. DTOs, mappe
 | Stateless API security, bearer-token validation and mapping the OpenID Connect subject to a local user profile.
 
 | User Profile Management
-| Local password-free profile lookup, listing and self-service profile updates.
+| Password-free local profile synchronization from OpenID Connect claims, current-profile lookup and team-profile listing for internal recipient selection.
 
 | Mailbox and Draft Management
 | Mailbox queries, draft creation/update, send transitions, internal recipient records, recipient validation and support reply preparation.
@@ -187,10 +195,12 @@ mail-system/
 |   |-- proxy.conf.json       Angular dev-server proxy for /api to localhost:8080
 |   |-- package.json          npm scripts and dependencies
 |   |-- build.gradle.kts      Gradle integration for frontend tasks
-|   |-- Caddyfile             production web server and API reverse proxy
+|   |-- Caddyfile             production static web server and SPA route fallback
 |   `-- Dockerfile            frontend build and Caddy image
 |
+|-- ips/                     HAProxy public edge and rate-limiting entry point
 |-- keycloak/                local Keycloak Docker image and realm import
+|-- proxy/                   ModSecurity/Nginx WAF and reverse proxy
 |-- docker-compose.yml       local container orchestration
 |-- build.gradle.kts         root Gradle orchestration
 |-- settings.gradle.kts      Gradle module declaration
@@ -227,7 +237,7 @@ mail-system/
 | Gradle Kotlin DSL, Gradle wrapper, Node Gradle plugin, npm
 
 | Runtime
-| Docker Compose, Caddy, Keycloak, Eclipse Temurin Java runtime
+| Docker Compose, HAProxy, ModSecurity/Nginx, Caddy, Keycloak, Eclipse Temurin Java runtime
 
 | Quality
 | detekt for Kotlin and angular-eslint for Angular/TypeScript
@@ -259,11 +269,14 @@ Required values for Docker Compose:
 
 [source,env]
 ----
+# Public edge ports exposed by the HAProxy/IPS gateway
+HTTP_HOST_PORT=80
+HTTPS_HOST_PORT=443
+
 DB_USER=postgres
 DB_PASSWORD=replace_with_local_db_password
 DB_NAME=mail_system
 
-MAIL_CLIENT_HOST_PORT=8081
 SERVER_PORT=8080
 SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE=10MB
 SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=25MB
@@ -295,10 +308,9 @@ MAIL_IMAP_FOLDER=INBOX
 MAIL_POLLING_INTERVAL_MS=60000
 SUPPORT_MAIL_ADDRESS=support@example.org
 
-KEYCLOAK_HOST_PORT=9080
 KEYCLOAK_ADMIN_USERNAME=admin
 KEYCLOAK_ADMIN_PASSWORD=replace_with_keycloak_admin_password
-KEYCLOAK_ISSUER_URI=http://localhost:9080/realms/mail-support
+KEYCLOAK_ISSUER_URI=https://localhost/realms/mail-support
 KEYCLOAK_JWK_SET_URI=http://keycloak:8080/realms/mail-support/protocol/openid-connect/certs
 KEYCLOAK_DB_NAME=keycloak
 KEYCLOAK_DB_USER=keycloak
@@ -318,6 +330,13 @@ SPRING_JPA_HIBERNATE_DDL_AUTO=update
 
 == Run With Docker
 
+The Docker edge proxy expects a local TLS certificate. Generate it once when `proxy/cert/proxy.crt` or `proxy/cert/proxy.key` is missing:
+
+[source,bash]
+----
+bash ./proxy/cert/generate-certificate.sh
+----
+
 Build and start the complete stack:
 
 [source,bash]
@@ -327,13 +346,15 @@ docker compose up --build
 
 Open the application at:
 
-* Frontend through Caddy: http://localhost:8081/app/
-* Backend API through Caddy only: http://localhost:8081/api
-* Generated OpenAPI document: http://localhost:8081/api/v3/api-docs
-* Swagger UI: http://localhost:8081/api/swagger-ui
-* Keycloak administration: http://localhost:9080/admin/
+* Frontend through the HTTPS edge gateway: https://localhost/app/
+* Backend API through the HTTPS edge gateway only: https://localhost/api
+* Generated OpenAPI document: https://localhost/api/v3/api-docs
+* Swagger UI: https://localhost/api/swagger-ui
+* Keycloak administration: https://localhost/admin/
 
-The backend service is not published directly to the host in Docker Compose. Browser/API access should go through Caddy under `/api`.
+HTTP on `http://localhost` redirects to HTTPS. Browsers may show a warning for the local self-signed certificate.
+
+The backend service is not published directly to the host in Docker Compose. Browser/API access should go through the edge gateway under `/api`.
 
 Stop the system:
 
@@ -376,7 +397,7 @@ npm ci
 npm run start
 ----
 
-The frontend development server listens on http://localhost:4200. It uses `frontend/proxy.conf.json` so browser requests to `/api/*` are forwarded to the backend on http://localhost:8080. This mirrors the Docker setup, where Caddy performs the same `/api/*` reverse proxying.
+The frontend development server listens on http://localhost:4200. It uses `frontend/proxy.conf.json` so browser requests to `/api/*` are forwarded to the backend on http://localhost:8080. This mirrors the Docker setup, where the edge gateway forwards `/api/*` to the backend.
 
 If the backend URL changes for direct development, update `frontend/proxy.conf.json` and restart `npm run start`.
 
@@ -439,13 +460,13 @@ The backend imports local sample profiles from `backend/src/main/resources/data.
 | 5 | Alikee | Raisbeck | `araisbeck4@example.com`
 |===
 
-For local evaluation, `keycloak/realm-mail-support.json` imports a matching Keycloak test identity. Replace evaluation identities and credentials for real deployments.
+For local evaluation, `keycloak/realm-mail-support.json` imports matching Keycloak test identities for these sample profiles. Replace evaluation identities and credentials for real deployments.
 
 == Operational Notes
 
 === Authentication
 
-The browser redirects users to Keycloak for authentication and registration. The Angular OAuth2/OIDC client performs Authorization Code Flow with PKCE and attaches the access token only to API requests. The Spring Security Resource Server validates the token issuer, lifetime and signature. The standard OpenID Connect `sub` claim links the external identity to a password-free local profile.
+The login page stays in the Angular application and redirects users to Keycloak only when they start the sign-in flow. The Angular OAuth2/OIDC client performs Authorization Code Flow with PKCE and attaches the access token only to API requests. The Spring Security Resource Server validates the token issuer, lifetime and signature. The standard OpenID Connect `sub` claim links the external identity to a password-free local profile. User credentials and account lifecycle are owned by Keycloak; the application exposes no local login, registration or password-management API.
 
 === Attachments
 
@@ -455,15 +476,15 @@ Attachments are stored in SeaweedFS through its S3-compatible API. The database 
 
 Internal mails are delivered inside the application only. They are visible to selected team profiles through the local database and are not sent through SMTP.
 
-External mails are sent through the configured SMTP account. The sender address is controlled by `SUPPORT_MAIL_ADDRESS`, which normally points to the same mailbox used for IMAP polling. Outgoing external messages include `X-Mail-System-Origin: mail-system` so the IMAP importer can identify and ignore copies generated by this application. Replies to imported support mails receive a `TICKET-000000` style ticket number in the subject when no ticket code exists yet.
+External mails are sent through the configured SMTP account. The sender address is controlled by `SUPPORT_MAIL_ADDRESS`, which normally points to the same mailbox used for IMAP polling. Outgoing external messages include `X-Mail-System-Origin: mail-system` so the IMAP importer can identify and ignore copies generated by this application. Replies to imported support mails receive a `[TICKET-000000] Re: ...` style ticket number in the subject when no ticket code exists yet. If the original subject is blank, `Support request` is used as the fallback subject text.
 
 === Mail Receiving
 
-IMAP polling is enabled in the backend application. The scheduler uses `mail.polling.interval-ms` / `MAIL_POLLING_INTERVAL_MS` and imports unread messages through the same import flow used by diagnostics.
+IMAP polling is enabled in the backend application. The scheduler uses `mail.polling.interval-ms` / `MAIL_POLLING_INTERVAL_MS` and imports unread messages through the same import flow used by operational diagnostics.
 
 Imported messages are persisted as `RECEIVED`, duplicate `Message-ID` values are skipped, attachments are stored through the attachment storage abstraction, app-generated SMTP copies are skipped through the application origin header, and successfully handled messages are marked as read on the IMAP server. Imported support mails are visible to authenticated support users.
 
-Authenticated IMAP diagnostics are available under `/api/imap/diagnostics` for unread count, previews and manual import execution.
+Health and IMAP diagnostics are runtime operational endpoints and are intentionally hidden from the generated OpenAPI/Swagger documentation.
 
 === Load-Balancing Preparation
 
@@ -486,11 +507,11 @@ docker compose up --build
 
 === Frontend cannot reach the API during development
 
-For Docker, access the application through http://localhost:8081 so Caddy can proxy `/api/*` to the backend. For separate development servers, make sure the backend is reachable on http://localhost:8080 and restart `npm run start` so Angular loads `proxy.conf.json`.
+For Docker, access the application through https://localhost/app/ so the edge gateway can forward `/api/*` to the backend. For separate development servers, make sure the backend is reachable on http://localhost:8080 and restart `npm run start` so Angular loads `proxy.conf.json`.
 
 === Login fails after deleting Docker volumes
 
-Deleting Docker volumes removes application and identity-provider state. Restart the full Docker Compose stack, open the frontend through Caddy at http://localhost:8081/app/ and start a fresh login through Keycloak.
+Deleting Docker volumes removes application and identity-provider state. Restart the full Docker Compose stack, open the frontend through the edge gateway at https://localhost/app/ and start a fresh login through Keycloak.
 
 === Database state should be reset
 
