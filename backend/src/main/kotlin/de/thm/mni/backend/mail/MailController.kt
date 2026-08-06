@@ -49,7 +49,7 @@ class MailController(
     private val mailService: MailService,
     private val mailAccessService: MailAccessService,
     private val mailMapper: MailMapper,
-    private val supportReplyService: SupportReplyService
+    private val mailReplyService: MailReplyService
 ) {
     /**
      * Returns draft mails owned by the authenticated user.
@@ -129,24 +129,24 @@ class MailController(
     }
 
     /**
-     * Builds a prefilled reply template for an imported support mail.
+     * Builds prefilled reply data for a visible internal or external mail.
      */
     @GetMapping("/{mailId}/reply-template")
     @Operation(
         operationId = "getMailReplyTemplate",
         summary = "Get a reply template",
-        description = "Builds prefilled reply data for a visible support mail."
+        description = "Builds prefilled reply data for a visible internal or external mail."
     )
     @ApiResponse(responseCode = "200", description = "Reply template returned successfully.")
     @NotFoundApiResponse
     fun getReplyTemplate(
-        @Parameter(description = "Mail identifier returned by a mail-list operation.") @PathVariable mailId: UUID,
+        @Parameter(description = "Identifier of the mail that should be answered.") @PathVariable mailId: UUID,
         @AuthenticationPrincipal jwt: Jwt
     ): MailReplyTemplate {
         val user = mailAccessService.authenticatedUser(jwt)
         val mail = mailAccessService.mailOrNotFound(mailId)
         mailAccessService.ensureMailVisible(mail, user)
-        return supportReplyService.getReplyTemplate(mail)
+        return mailReplyService.getReplyTemplate(mail, user)
     }
 
     /**
