@@ -10,6 +10,7 @@ import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
@@ -35,6 +36,16 @@ class Mail {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = true)
     var sender: User? = null
+
+    /**
+     * Original mail answered by this mail.
+     *
+     * The relation is stored for internal and external replies so that reply
+     * context survives draft creation, editing and application restarts.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "in_reply_to_mail_id")
+    var inReplyToMail: Mail? = null
 
     @Column(length = SUBJECT_COLUMN_LENGTH)
     var subject: String = ""

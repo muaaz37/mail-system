@@ -24,6 +24,7 @@ class MailMapper(private val mailRecordService: MailRecordService) {
 
         return MailDTO(
             id = mail.id,
+            replyToMailId = mail.inReplyToMail?.id,
             sender = mail.sender?.toDTO(),
             externalSenderEmail = mail.externalSenderEmail,
             externalSenderName = mail.externalSenderName,
