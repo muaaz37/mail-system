@@ -52,7 +52,6 @@ class MailImportService(
      */
     private fun importUnreadMailInTransaction(imapMail: ImapMailData): ImportResult {
         return transactionTemplate.execute { importUnreadMail(imapMail) }
-            ?: ImportResult(mail = null, markAsSeen = false)
     }
 
     /**

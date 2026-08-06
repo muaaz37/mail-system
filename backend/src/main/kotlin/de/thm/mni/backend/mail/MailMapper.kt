@@ -38,13 +38,7 @@ class MailMapper(private val mailRecordService: MailRecordService) {
             content = mail.content,
             status = mail.status,
             source = if (mail.sender == null) MailSource.EXTERN else MailSource.INTERN,
-            // Legacy rows can have no delivery mode. Imported mails have no internal sender;
-            // all other legacy rows are internal application mails.
-            deliveryMode = mail.deliveryMode ?: if (mail.sender == null) {
-                MailDeliveryMode.EXTERNAL
-            } else {
-                MailDeliveryMode.INTERNAL
-            },
+            deliveryMode = mail.deliveryMode,
             to = records.filter { record -> record.type == MailType.TO }.map { record -> record.user!!.toDTO() },
             cc = records.filter { record -> record.type == MailType.CC }.map { record -> record.user!!.toDTO() },
             bcc = records

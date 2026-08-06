@@ -125,7 +125,7 @@ The preferred architecture documentation uses a logical C4 model. The Mail Suppo
 | Public HTTP/HTTPS entry point; forwards `/app/` to Caddy, `/api/*` to the backend and `/realms/*`, `/resources/*`, `/admin/*` to Keycloak.
 
 | Backend API
-| Kotlin 2.2, Java 21, Spring Boot 4, Spring Security OAuth2 Resource Server, Spring Data JPA, Spring Mail, AWS SDK S3
+| Kotlin 2.3, Java 21, Spring Boot 4.1, Spring Security OAuth2 Resource Server, Spring Data JPA, Spring Mail, AWS SDK S3
 | HTTP REST API under `/api/*`; JDBC to PostgreSQL; S3-compatible HTTP to SeaweedFS; SMTP/IMAP to the support mail server; OIDC JWK lookup to Keycloak.
 
 | Application Database
@@ -219,7 +219,7 @@ mail-system/
 | Angular 21, TypeScript, PrimeNG, PrimeIcons, Tailwind CSS, angular-oauth2-oidc
 
 | Backend
-| Kotlin 2.2, Java 21, Spring Boot 4, Spring Security OAuth2 Resource Server, Spring Data JPA, Spring Validation, SpringDoc OpenAPI
+| Kotlin 2.3, Java 21, Spring Boot 4.1, Spring Security OAuth2 Resource Server, Spring Data JPA, Spring Validation, SpringDoc OpenAPI
 
 | Identity provider
 | Keycloak 26 with OpenID Connect
@@ -234,7 +234,7 @@ mail-system/
 | Spring Boot Mail, JavaMail, Spring Integration Mail, SMTP, IMAP
 
 | Build
-| Gradle Kotlin DSL, Gradle wrapper, Node Gradle plugin, npm
+| Gradle Kotlin DSL, Gradle wrapper 9.6.1, Node Gradle plugin, Node.js 24.12.0, npm 11.6.2
 
 | Runtime
 | Docker Compose, HAProxy, ModSecurity/Nginx, Caddy, Keycloak, Eclipse Temurin Java runtime
@@ -253,6 +253,7 @@ Install the following tools for local operation and development:
 * A compatible SMTP/IMAP mailbox when testing real mail integration
 
 The Gradle wrapper downloads the configured Gradle version automatically. The Gradle-driven frontend build downloads the configured Node/npm versions through the Node Gradle plugin.
+Direct backend and frontend dependencies are pinned to fixed versions in their build manifests. Transitive npm packages are resolved through `frontend/package-lock.json`.
 
 == Configuration
 

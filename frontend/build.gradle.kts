@@ -12,10 +12,19 @@ node {
   npmVersion = "11.6.2"
 }
 
+val npmCi = tasks.register<NpmTask>("npmCi") {
+  group = "build"
+  description = "Installs frontend dependencies exactly from package-lock.json."
+  dependsOn("npmSetup")
+  args.set(listOf("ci"))
+  inputs.files("package.json", "package-lock.json")
+  outputs.dir("node_modules")
+}
+
 val npmBuild = tasks.register<NpmTask>("npmBuild") {
   group = "build"
   description = "Builds the Angular frontend bundle."
-  dependsOn("npmInstall")
+  dependsOn(npmCi)
   args.set(listOf("run", "build"))
 }
 
@@ -26,7 +35,7 @@ tasks.named("assemble") {
 tasks.register<NpmTask>("lintFrontend") {
   group = "verification"
   description = "Runs ESLint for the Angular frontend."
-  dependsOn("npmInstall")
+  dependsOn(npmCi)
   args.set(listOf("run", "lint"))
 }
 
