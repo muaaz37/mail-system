@@ -1,4 +1,4 @@
-:80 {
+:8080 {
 	root * /srv
 	header {
 		Cache-Control "no-store"
@@ -6,11 +6,6 @@
 
 	@rootSpaRoutes path /mails /mails/* /login /404
 	redir @rootSpaRoutes /app{uri} 308
-
-	handle_path /api/* {
-		rewrite * /api{uri}
-		reverse_proxy mail-server:{$SERVER_PORT:8080}
-	}
 
 	handle /node_modules/* {
 		file_server

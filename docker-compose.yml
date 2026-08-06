@@ -1,4 +1,73 @@
+# security restrictions for all containers
+x-container-security: &container-security
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+# Extended restrictions for containers that support a read-only root filesystem
+x-read-only-container: &read-only-container
+  <<: *container-security
+  read_only: true
+
 services:
+  ips:
+    build:
+      context: ./ips
+      dockerfile: Dockerfile
+    image: mail-system-ips
+    restart: unless-stopped
+    ports:
+      - "${HTTP_HOST_PORT:-80}:8080"
+      - "${HTTPS_HOST_PORT:-443}:8443"
+    depends_on:
+      proxy:
+        condition: service_healthy
+    <<: *read-only-container
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    networks:
+      - gateway-waf
+
+  proxy:
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    image: mail-system-waf
+    restart: unless-stopped
+    environment:
+      SERVER_NAME: localhost
+      PORT: "8080"
+      SSL_PORT: "8443"
+      NGINX_ALWAYS_TLS_REDIRECT: "on"
+      SSL_CERT_FILE: /run/secrets/proxy_certificate
+      SSL_CERT_KEY_FILE: /run/secrets/proxy_private_key
+      MODSEC_RULE_ENGINE: "On"
+      MODSEC_AUDIT_ENGINE: "RelevantOnly"
+      MODSEC_AUDIT_LOG: /dev/stdout
+      MODSEC_AUDIT_LOG_FORMAT: JSON
+      BLOCKING_PARANOIA: "2"
+      DETECTION_PARANOIA: "3"
+      ALLOWED_METHODS: "GET HEAD POST PUT PATCH DELETE OPTIONS"
+      MODSEC_REQ_BODY_ACCESS: "On"
+      MODSEC_REQ_BODY_LIMIT: "26214400"           # 25MiB
+      MODSEC_REQ_BODY_NOFILES_LIMIT: "1048576"    # 1MiB
+    depends_on:
+      mail-client:
+        condition: service_healthy
+      mail-server:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    secrets:
+      - proxy_certificate
+      - proxy_private_key
+    <<: *container-security
+    networks:
+      - gateway-waf
+      - proxy-client
+      - proxy-server
+      - proxy-keycloak
+
   mail-client:
     build:
       context: ./frontend
@@ -6,13 +75,18 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: ${SERVER_PORT:-8080}
-    ports:
-      - "${MAIL_CLIENT_HOST_PORT:-8081}:80"
     depends_on:
       mail-server:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+    <<: *read-only-container
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+      - /data:rw,noexec,nosuid,size=16m,mode=1777
+      - /config:rw,noexec,nosuid,size=16m,mode=1777
+    networks:
+      - proxy-client
 
   mail-server:
     build:
@@ -65,19 +139,19 @@ services:
 
       MAIL_POLLING_INTERVAL_MS: ${MAIL_POLLING_INTERVAL_MS:-60000}
       SUPPORT_MAIL_ADDRESS: ${SUPPORT_MAIL_ADDRESS:?SUPPORT_MAIL_ADDRESS must be set}
-    healthcheck: # check if server is up and running
-      test:
-        [
-          "CMD-SHELL",
-          "wget --quiet --spider http://localhost:$${SERVER_PORT:-8080}/api/swagger-ui/index.html",
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 120s
+    <<: *read-only-container
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+    networks:
+      - proxy-server
+      - server-database
+      - server-storage
+      - server-keycloak
+      - mail-egress
 
   database:
     image: postgres:16
+    user: postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
@@ -90,9 +164,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    <<: *read-only-container
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m,mode=1777
+      - /var/run/postgresql:rw,noexec,nosuid,size=16m,mode=1777
+    networks:
+      - server-database
 
   seaweedfs:
     image: chrislusf/seaweedfs:4.38
+    user: seaweed
     restart: unless-stopped
     command: "server -s3 -dir=/data"
     environment:
@@ -103,6 +184,11 @@ services:
       - "8333"
     volumes:
       - seaweedfs_data:/data
+    <<: *read-only-container
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+    networks:
+      - server-storage
 
   keycloak:
     build:
@@ -110,7 +196,14 @@ services:
       dockerfile: Dockerfile
     image: mail-system-keycloak
     restart: unless-stopped
-    command: ["start-dev", "--import-realm"]
+    command:
+      - start
+      - --optimized
+      - --import-realm
+      - --http-enabled=true
+      - --proxy-headers=xforwarded
+      - --hostname=https://localhost
+      - --hostname-strict=true
     depends_on:
       keycloak-database:
         condition: service_healthy
@@ -122,23 +215,20 @@ services:
       KC_DB_URL: jdbc:postgresql://keycloak-database:5432/${KEYCLOAK_DB_NAME:-keycloak}
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
-    ports:
-      - "${KEYCLOAK_HOST_PORT:-9080}:8080"
     volumes:
       - ./keycloak/realm-mail-support.json:/opt/keycloak/data/import/realm-mail-support.json:ro
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "{ printf 'HEAD /health/ready HTTP/1.0\\r\\n\\r\\n' >&0; grep 'HTTP/1.0 200'; } 0<>/dev/tcp/127.0.0.1/9000",
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 90s
+    <<: *read-only-container
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m,mode=1777
+      - /opt/keycloak/data/tmp:rw,noexec,nosuid,size=64m,mode=1777
+    networks:
+      - proxy-keycloak
+      - server-keycloak
+      - keycloak-database
 
   keycloak-database:
     image: postgres:16
+    user: postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${KEYCLOAK_DB_NAME:-keycloak}
@@ -151,8 +241,51 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    <<: *read-only-container
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m,mode=1777
+      - /var/run/postgresql:rw,noexec,nosuid,size=16m,mode=1777
+    networks:
+      - keycloak-database
 
 volumes:
   db_data:
   seaweedfs_data:
   keycloak_db_data:
+
+networks:
+  # Public edge network between the HAProxy gateway and the ModSecurity WAF
+  gateway-waf:
+
+  # Isolated connection between the WAF and the frontend.
+  proxy-client:
+    internal: true
+  # Isolated connection between the WAF and the backend API.
+  proxy-server:
+    internal: true
+  # Isolated connection between the WAF and Keycloak.
+  proxy-keycloak:
+    internal: true
+
+  # Isolated connection between the backend and its PostgreSQL database.
+  server-database:
+    internal: true
+  # Isolated connection between Keycloak and its PostgreSQL database.
+  keycloak-database:
+    internal: true
+
+  # Isolated connection between the backend and SeaweedFS.
+  server-storage:
+    internal: true
+  # Isolated connection used by the backend to access Keycloak.
+  server-keycloak:
+    internal: true
+
+  # Spring Boot API to external SMTP and IMAP services
+  mail-egress:
+
+secrets:
+  proxy_certificate:
+    file: ./proxy/cert/proxy.crt
+  proxy_private_key:
+    file: ./proxy/cert/proxy.key

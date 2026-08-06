@@ -4,7 +4,7 @@ export const API_BASE_URL = '/api';
  * The URL of the OpenID Connect (OIDC) issuer, which is the Keycloak server in this case.
  */
 export const OIDC_ISSUER_URL =
-  `${window.location.protocol}//${window.location.hostname}:9080/realms/mail-support`;
+  `${window.location.origin}/realms/mail-support`;
 
 /**
  * The client ID for the OpenID Connect (OIDC) authentication,

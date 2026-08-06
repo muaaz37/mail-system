@@ -2,7 +2,7 @@
   "realm": "mail-support",
   "enabled": true,
   "displayName": "Mail Support System",
-  "registrationAllowed": true,
+  "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
@@ -19,16 +19,16 @@
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "http://localhost:8081/app/*",
+        "https://localhost/app/*",
         "http://localhost:4200/*"
       ],
       "webOrigins": [
-        "http://localhost:8081",
+        "https://localhost",
         "http://localhost:4200"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:8081/app/*##http://localhost:4200/*"
+        "post.logout.redirect.uris": "https://localhost/app/*##http://localhost:4200/*"
       },
       "defaultClientScopes": [
         "basic",

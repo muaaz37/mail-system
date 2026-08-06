@@ -45,3 +45,9 @@ loesung.md
 *.tmp
 *.temp
 *.swp
+
+# Local TLS certificates and private keys
+proxy/cert/*.crt
+proxy/cert/*.key
+proxy/cert/*.pem
+proxy/cert/*.csr
