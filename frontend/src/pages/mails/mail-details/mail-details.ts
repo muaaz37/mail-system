@@ -79,15 +79,27 @@ export class MailDetails implements OnInit {
   }
 
   /**
-   * Checks whether a support reply can be created from the displayed mail.
+   * Checks whether the displayed mail can be answered by the current user.
    *
-   * @returns True for unresolved external received support mails.
+   * Internal inbox mails can be answered after delivery. External support mails
+   * can be answered while their associated ticket remains unresolved.
+   *
+   * @returns True when the reply action should be available.
    */
-  canReplyToSupportMail(): boolean {
+  canReply(): boolean {
     const mail = this.mail();
-    return mail?.status === MailStatus.RECEIVED &&
-      mail.deliveryMode === MailDeliveryMode.EXTERNAL &&
-      mail.ticketStatus !== SupportTicketStatus.RESOLVED;
+
+    if (!mail || this.isUserSender()) {
+      return false;
+    }
+
+    if (mail.deliveryMode === MailDeliveryMode.INTERNAL) {
+      return mail.status === MailStatus.SENT && mail.sender !== null;
+    }
+
+    return (
+      mail.status === MailStatus.RECEIVED && mail.ticketStatus !== SupportTicketStatus.RESOLVED
+    );
   }
 
   /**
@@ -97,8 +109,9 @@ export class MailDetails implements OnInit {
    */
   canViewTicket(): boolean {
     const mail = this.mail();
-    return !!mail?.ticketId &&
-      !(mail.deliveryMode === MailDeliveryMode.INTERNAL && this.isUserSender());
+    return (
+      !!mail?.ticketId && !(mail.deliveryMode === MailDeliveryMode.INTERNAL && this.isUserSender())
+    );
   }
 
   /**
@@ -141,13 +154,16 @@ export class MailDetails implements OnInit {
   }
 
   /**
-   * Opens the compose page with a backend-generated support reply template.
+   * Opens the compose page with reply metadata for the displayed mail.
    */
-  replyToSupportMail(): void {
+  replyToMail(): void {
     const mail = this.mail();
-    if (mail) {
-      this.router.navigate(['/mails', mail.id, 'reply']);
+
+    if (!mail || !this.canReply()) {
+      return;
     }
+
+    this.router.navigate(['/mails', mail.id, 'reply']);
   }
 
   /**
@@ -241,7 +257,10 @@ export class MailDetails implements OnInit {
    * @returns True when MIME type or filename indicates a PDF.
    */
   isPdfAttachment(attachment: Attachment): boolean {
-    return attachment.mimeType === 'application/pdf' || attachment.fileName?.toLowerCase().endsWith('.pdf');
+    return (
+      attachment.mimeType === 'application/pdf' ||
+      attachment.fileName?.toLowerCase().endsWith('.pdf')
+    );
   }
 
   /**

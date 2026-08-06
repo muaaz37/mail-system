@@ -1,6 +1,8 @@
 <p-toast />
 <div class="min-h-screen px-6">
-  <div class="mail-toolbar rounded-2xl bg-white border-b border-gray-200 p-4 sticky top-0 z-10 shadow-sm">
+  <div
+    class="mail-toolbar rounded-2xl bg-white border-b border-gray-200 p-4 sticky top-0 z-10 shadow-sm"
+  >
     <div class="flex items-center gap-3">
       <p-button
         (click)="goBack()"
@@ -11,19 +13,27 @@
       />
     </div>
     <div class="mail-toolbar-actions">
-      @if (canReplyToSupportMail()) {
+      @if (canReply()) {
         <button
           type="button"
-          (click)="replyToSupportMail()"
+          (click)="replyToMail()"
           class="support-reply-button"
-          aria-label="Reply to sender with the support address"
+          aria-label="Reply to message"
         >
           <span class="support-reply-icon">
             <i class="pi pi-reply"></i>
           </span>
+
           <span class="support-reply-copy">
-            <span class="support-reply-label">Reply to sender</span>
-            <span class="support-reply-hint">Sends from support address</span>
+            <span class="support-reply-label"> Reply to sender </span>
+
+            <span class="support-reply-hint">
+              {{
+                mail()!.deliveryMode === MailDeliveryMode.INTERNAL
+                  ? 'Replies inside the application'
+                  : 'Sends from support address'
+              }}
+            </span>
           </span>
         </button>
       }
@@ -38,7 +48,7 @@
           View ticket
         </button>
       }
-      @if(canManageDraft()){
+      @if (canManageDraft()) {
         <p-button
           (click)="sendMail()"
           severity="secondary"
@@ -60,7 +70,7 @@
           class="p-button-text p-button-rounded p-button-secondary"
           pTooltip="Delete Mail"
         />
-      } @else if(isUserSender()){
+      } @else if (isUserSender()) {
         <p-button
           (click)="deleteMail()"
           severity="secondary"
@@ -92,10 +102,16 @@
                 <p-tag [value]="ticketStatusLabel()" severity="warn"></p-tag>
               }
               @if (mail()!.ticketPriority) {
-                <p-tag [value]="mail()!.ticketPriority!.toLowerCase() + ' priority'" severity="secondary"></p-tag>
+                <p-tag
+                  [value]="mail()!.ticketPriority!.toLowerCase() + ' priority'"
+                  severity="secondary"
+                ></p-tag>
               }
               <p-tag [value]="mail()?.status" [severity]="getSeverityBadge(mail()!.status)"></p-tag>
-              <p-tag [value]="'Origin: ' + mail()!.source" [severity]="getSourceBadge(mail()!.source)"></p-tag>
+              <p-tag
+                [value]="'Origin: ' + mail()!.source"
+                [severity]="getSourceBadge(mail()!.source)"
+              ></p-tag>
               <p-tag [value]="'Delivery: ' + mail()!.deliveryMode" severity="secondary"></p-tag>
             </div>
           </div>
@@ -112,9 +128,9 @@
             </p-avatar>
             <div>
               <div class="flex items-center gap-2">
-                <span class="font-bold text-gray-900"
-                  >{{ getMailSenderDisplay(mail()!).name }}</span
-                >
+                <span class="font-bold text-gray-900">{{
+                  getMailSenderDisplay(mail()!).name
+                }}</span>
                 @if (getMailSenderDisplay(mail()!).email) {
                   <span class="text-gray-500 text-sm"
                     >&lt;{{ getMailSenderDisplay(mail()!).email }}&gt;</span
@@ -161,7 +177,9 @@
                 {{ getExternalEmailString(mail()!.externalBcc) }}
               </p>
             }
-            @if (mail()!.deliveryMode === MailDeliveryMode.EXTERNAL && mail()!.externalReplyTo.length) {
+            @if (
+              mail()!.deliveryMode === MailDeliveryMode.EXTERNAL && mail()!.externalReplyTo.length
+            ) {
               <p>
                 <span class="font-semibold text-gray-400 uppercase mr-2">Reply To:</span>
                 {{ getExternalEmailString(mail()!.externalReplyTo) }}
@@ -213,9 +231,7 @@
             <div class="flex flex-wrap gap-3">
               @for (attachment of mail()!.attachments; track attachment.fileName) {
                 <div
-                  [className]="
-                    'flex items-center gap-3 p-4 bg-gray-100 border border-gray-300 rounded-md max-w-xl'
-                  "
+                  [className]="'flex items-center gap-3 p-4 bg-gray-100 border border-gray-300 rounded-md max-w-xl'"
                 >
                   <div class="flex flex-col gap-1">
                     <span class="text-sm font-medium text-gray-700">{{ attachment.fileName }}</span>
@@ -237,12 +253,16 @@
                         class="w-96 h-64 rounded-md border border-gray-300 bg-white mt-2"
                       ></iframe>
                     } @else {
-                      <div class="w-24 h-20 rounded-md border border-gray-300 bg-white mt-2 flex items-center justify-center text-gray-500">
+                      <div
+                        class="w-24 h-20 rounded-md border border-gray-300 bg-white mt-2 flex items-center justify-center text-gray-500"
+                      >
                         <i class="pi pi-file text-3xl"></i>
                       </div>
                     }
-                    <a href="#" (click)="$event.preventDefault(); openAttachment(attachment)"
-                       class="text-xs text-blue-600 hover:underline mt-1"
+                    <a
+                      href="#"
+                      (click)="$event.preventDefault(); openAttachment(attachment)"
+                      class="text-xs text-blue-600 hover:underline mt-1"
                     >
                       Open attachment
                     </a>
