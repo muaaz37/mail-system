@@ -38,11 +38,11 @@ class SupportTicketAccessServiceTests {
     }
 
     /**
-     * Test that an external incoming ticket is visible to registered users.
-     * This test creates an external mail with no sender and checks that a registered user can view the ticket.
+     * Test that an external incoming ticket is visible to team profiles.
+     * This test creates an external mail with no sender and checks that a team profile can view the ticket.
      */
     @Test
-    fun `external incoming ticket remains visible to registered users`() {
+    fun `external incoming ticket remains visible to team profiles`() {
         val mail = Mail().apply {
             id = UUID.randomUUID()
             status = MailStatus.RECEIVED

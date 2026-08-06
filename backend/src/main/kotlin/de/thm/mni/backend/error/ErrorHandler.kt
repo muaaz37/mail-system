@@ -43,18 +43,8 @@ class ErrorHandler {
         err: AuthenticatedUserNotFoundException
     ): ResponseEntity<AppError> {
         log.warn("Authenticated user not found: {}", err.message)
-        val error = AppError(HttpStatus.UNAUTHORIZED.value(), err.message)
+        val error = AppError(HttpStatus.UNAUTHORIZED.value(), AUTHENTICATION_REFRESH_REQUIRED_MESSAGE)
         return ResponseEntity<AppError>(error, HttpStatus.UNAUTHORIZED)
-    }
-
-    /**
-     * Handles conflicts such as duplicate email addresses.
-     */
-    @ExceptionHandler(ResourceAlreadyExistsException::class)
-    fun handleResourceAlreadyExistsException(err: ResourceAlreadyExistsException): ResponseEntity<AppError> {
-        log.warn("Resource already exists: {}", err.message)
-        val error = AppError(HttpStatus.CONFLICT.value(), err.message)
-        return ResponseEntity<AppError>(error, HttpStatus.CONFLICT)
     }
 
     /**
@@ -160,6 +150,7 @@ class ErrorHandler {
         const val UNSUPPORTED_MEDIA_TYPE_MESSAGE = "The request contains an unsupported content type."
         const val ATTACHMENT_STORAGE_FAILED_MESSAGE = "Attachment storage is currently unavailable."
         const val ATTACHMENT_NOT_FOUND_MESSAGE = "Attachment was not found."
+        const val AUTHENTICATION_REFRESH_REQUIRED_MESSAGE = "Authentication required. Please log in again."
         const val UNEXPECTED_ERROR_MESSAGE = "Unexpected server error. Please try again later."
     }
 }

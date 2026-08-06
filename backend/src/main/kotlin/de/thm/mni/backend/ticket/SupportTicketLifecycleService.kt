@@ -2,9 +2,11 @@ package de.thm.mni.backend.ticket
 
 import de.thm.mni.backend.error.InvalidMailRequestException
 import de.thm.mni.backend.mail.Mail
+import de.thm.mni.backend.mail.MailRepository
 import de.thm.mni.backend.mail.SupportTicketService
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
+import de.thm.mni.backend.mail.toMessageIdList
 import de.thm.mni.backend.ticket.enums.SupportTicketStatus
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service
 @Service
 class SupportTicketLifecycleService(
     private val ticketRepository: SupportTicketRepository,
+    private val mailRepository: MailRepository,
     private val supportTicketService: SupportTicketService,
     private val readStateService: SupportTicketReadStateService
 ) {
@@ -90,18 +93,45 @@ class SupportTicketLifecycleService(
     }
 
     private fun findOrCreateTicket(mail: Mail): SupportTicket {
-        val ticketNumber = mail.ticketNumber
-            ?: supportTicketService.extractTicketNumber(mail.subject)
-            ?: supportTicketService.generateUniqueTicketNumber()
+        return mail.ticket
+            ?: findTicketByThreadReferences(mail)
+            ?: findTicketByTrustedSubject(mail)
+            ?: SupportTicket().apply {
+                ticketNumber = supportTicketService.generateUniqueTicketNumber()
+                status = SupportTicketStatus.WAITING_FOR_SUPPORT
+            }
+    }
 
-        val existingTicket = ticketRepository.findByTicketNumber(ticketNumber)
-        if (existingTicket != null) {
-            return existingTicket
-        }
+    /**
+     * Resolves customer replies through RFC mail-thread headers before trusting the editable subject.
+     */
+    private fun findTicketByThreadReferences(mail: Mail): SupportTicket? {
+        val referencedMessageIds = (
+            mail.externalInReplyTo.toMessageIdList() +
+                mail.externalReferences.toMessageIdList()
+            ).distinct()
 
-        return SupportTicket().apply {
-            this.ticketNumber = ticketNumber
-            status = SupportTicketStatus.WAITING_FOR_SUPPORT
+        return referencedMessageIds.asSequence()
+            .mapNotNull { messageId -> mailRepository.findByExternalMessageId(messageId)?.ticket }
+            .firstOrNull()
+    }
+
+    /**
+     * Uses a subject ticket only when it points to an existing ticket owned by the same requester.
+     */
+    private fun findTicketByTrustedSubject(mail: Mail): SupportTicket? {
+        val ticket = supportTicketService.extractTicketNumber(mail.subject)
+            ?.let { ticketNumber -> ticketRepository.findByTicketNumber(ticketNumber) }
+        val requesterEmail = ticket?.requesterEmail
+        val senderEmail = mail.externalSenderEmail
+        val requesterMatchesSender = requesterEmail != null &&
+            senderEmail != null &&
+            requesterEmail.equals(senderEmail, ignoreCase = true)
+
+        return if (requesterMatchesSender) {
+            ticket
+        } else {
+            null
         }
     }
 

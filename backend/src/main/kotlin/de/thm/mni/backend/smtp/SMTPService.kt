@@ -33,7 +33,14 @@ class SMTPService(
             val helper = MimeMessageHelper(mimeMessage, true, "UTF-8")
 
             mimeMessage.setHeader(APP_ORIGIN_HEADER, APP_ORIGIN_VALUE)
+            mimeMessage.setHeader(MESSAGE_ID_HEADER, ensureMessageId(mail))
             mail.id?.let { id -> mimeMessage.setHeader(APP_MAIL_ID_HEADER, id.toString()) }
+            mail.externalInReplyTo
+                ?.takeIf { header -> header.isNotBlank() }
+                ?.let { header -> mimeMessage.setHeader(IN_REPLY_TO_HEADER, header) }
+            mail.externalReferences
+                ?.takeIf { header -> header.isNotBlank() }
+                ?.let { header -> mimeMessage.setHeader(REFERENCES_HEADER, header) }
 
             helper.setFrom(InternetAddress(supportMailProperties.address))
             helper.setSubject(mail.subject)
@@ -90,3 +97,20 @@ class SMTPService(
         const val APP_MAIL_ID_HEADER = "X-Mail-System-Mail-Id"
     }
 }
+
+private fun ensureMessageId(mail: Mail): String {
+    val existingMessageId = mail.externalMessageId?.takeIf { messageId -> messageId.isNotBlank() }
+    if (existingMessageId != null) {
+        return existingMessageId
+    }
+
+    val mailId = mail.id ?: throw MessagingException("Cannot send a mail before it has been persisted.")
+    val generatedMessageId = "<mail-system-$mailId@$MESSAGE_ID_DOMAIN>"
+    mail.externalMessageId = generatedMessageId
+    return generatedMessageId
+}
+
+private const val MESSAGE_ID_HEADER = "Message-ID"
+private const val IN_REPLY_TO_HEADER = "In-Reply-To"
+private const val REFERENCES_HEADER = "References"
+private const val MESSAGE_ID_DOMAIN = "mail-system.local"

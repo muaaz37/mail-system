@@ -2,6 +2,7 @@ package de.thm.mni.backend.mail
 
 import de.thm.mni.backend.error.InvalidMailRequestException
 import de.thm.mni.backend.error.ResourceNotFoundException
+import de.thm.mni.backend.mail.dto.MailPayload
 import de.thm.mni.backend.mail.dto.MailReplyTemplate
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
@@ -29,10 +30,7 @@ class SupportReplyService(
         ensureCanReplyToSupportMail(originalMail)
         val ticket = supportTicketLifecycleService.ensureTicketForMail(originalMail)
         val ticketNumber = ticket.ticketNumber
-        val recipient = originalMail.externalReplyTo.toRecipientList()
-            .firstNotNullOfOrNull { recipient -> recipient.emailAddress() }
-            ?: originalMail.externalSenderEmail.emailAddress()
-            ?: throw InvalidMailRequestException("Incoming support mail has no reply recipient.")
+        val recipient = replyRecipientFor(originalMail)
 
         return MailReplyTemplate(
             replyToMailId = originalMail.id!!,
@@ -40,6 +38,37 @@ class SupportReplyService(
             subject = supportTicketService.buildReplySubject(originalMail.subject, ticketNumber),
             externalTo = listOf(recipient)
         )
+    }
+
+    /**
+     * Replaces client-supplied primary recipients with the original support sender.
+     */
+    @Transactional
+    fun enforceReplyRecipient(payload: MailPayload) {
+        val replyToMailId = payload.replyToMailId ?: return
+        if (payload.deliveryMode != MailDeliveryMode.EXTERNAL) {
+            throw InvalidMailRequestException("Support replies must be external mails.")
+        }
+
+        val originalMail = getMailById(replyToMailId)
+        ensureCanReplyToSupportMail(originalMail)
+        payload.externalTo.clear()
+        payload.externalTo.add(replyRecipientFor(originalMail))
+    }
+
+    /**
+     * Keeps the locked primary recipient when a stored support reply draft is edited later.
+     */
+    fun enforceStoredReplyRecipient(existingMail: Mail, payload: MailPayload) {
+        if (!existingMail.hasSupportTicketContext() || payload.replyToMailId != null) {
+            return
+        }
+        if (payload.deliveryMode != MailDeliveryMode.EXTERNAL) {
+            throw InvalidMailRequestException("Support replies must be external mails.")
+        }
+
+        payload.externalTo.clear()
+        payload.externalTo.addAll(existingMail.externalTo.toRecipientList())
     }
 
     /**
@@ -57,7 +86,33 @@ class SupportReplyService(
         val originalMail = getMailById(replyToMailId)
         ensureCanReplyToSupportMail(originalMail)
         val ticket = supportTicketLifecycleService.attachReplyMail(mail, originalMail)
+        mail.externalTo = listOf(replyRecipientFor(originalMail)).toRecipientString()
+        mail.externalInReplyTo = originalMail.externalMessageId
+        mail.externalReferences = referencesForReply(originalMail)
         mail.subject = supportTicketService.prependTicketIfMissing(mail.subject, ticket.ticketNumber)
+    }
+
+    /**
+     * Restores the ticket prefix before an external support reply is sent.
+     */
+    fun enforceTicketSubject(mail: Mail) {
+        val ticketNumber = mail.ticket?.ticketNumber ?: mail.ticketNumber ?: return
+        mail.ticketNumber = ticketNumber
+        mail.subject = supportTicketService.prependTicketIfMissing(mail.subject, ticketNumber)
+    }
+
+    private fun referencesForReply(originalMail: Mail): String {
+        return (
+            originalMail.externalReferences.toMessageIdList() +
+                originalMail.externalMessageId.toMessageIdList()
+            ).toMessageIdHeaderValue()
+    }
+
+    private fun replyRecipientFor(originalMail: Mail): String {
+        return originalMail.externalReplyTo.toRecipientList()
+            .firstNotNullOfOrNull { recipient -> recipient.emailAddress() }
+            ?: originalMail.externalSenderEmail.emailAddress()
+            ?: throw InvalidMailRequestException("Incoming support mail has no reply recipient.")
     }
 
     private fun getMailById(mailId: UUID): Mail {
@@ -78,6 +133,10 @@ class SupportReplyService(
             throw InvalidMailRequestException("Incoming support mail has no reply recipient.")
         }
     }
+}
+
+private fun Mail.hasSupportTicketContext(): Boolean {
+    return deliveryMode == MailDeliveryMode.EXTERNAL && (ticket != null || ticketNumber != null)
 }
 
 /**

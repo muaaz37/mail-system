@@ -71,6 +71,12 @@ class Mail {
     @Column(name = "external_message_id", unique = true)
     var externalMessageId: String? = null
 
+    @Column(name = "external_in_reply_to", length = THREAD_HEADER_COLUMN_LENGTH)
+    var externalInReplyTo: String? = null
+
+    @Column(name = "external_references", columnDefinition = "TEXT")
+    var externalReferences: String? = null
+
     @Column(name = "external_sent_at")
     var externalSentAt: LocalDateTime? = null
 
@@ -143,5 +149,6 @@ class Mail {
     private companion object {
         const val SUBJECT_COLUMN_LENGTH = 500
         const val RECIPIENT_COLUMN_LENGTH = 1000
+        const val THREAD_HEADER_COLUMN_LENGTH = 1000
     }
 }

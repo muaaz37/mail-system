@@ -51,7 +51,7 @@ class DatabaseInitializer(
 
         jsonData.mails.forEach { dto ->
             val mail = Mail(
-                sender = userRepository.findByEmail(dto.senderEmail)!!,
+                sender = userRepository.findUserByEmail(dto.senderEmail)!!,
                 subject = dto.subject,
                 content = dto.content,
                 attachments = mutableListOf()

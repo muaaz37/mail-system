@@ -9,7 +9,7 @@ import de.thm.mni.backend.openapi.BearerAuthenticated
 import de.thm.mni.backend.openapi.DefaultApiErrors
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
-import io.swagger.v3.oas.annotations.tags.Tag
+import io.swagger.v3.oas.annotations.Hidden
 import org.springframework.http.MediaType
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController
 /**
  * Exposes authenticated IMAP diagnostics and a manual import trigger.
  */
-@Tag(name = "IMAP Diagnostics", description = "Inspect and trigger support mailbox imports.")
+@Hidden
 @BearerAuthenticated
 @DefaultApiErrors
 @RestController

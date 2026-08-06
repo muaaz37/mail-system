@@ -40,7 +40,7 @@ import org.springframework.scheduling.annotation.EnableScheduling
     tags = [
         Tag(
             name = "User",
-            description = "Manage registered application users."
+            description = "View application user profiles synchronized from Keycloak."
         ),
         Tag(
             name = "Mail",
@@ -53,10 +53,6 @@ import org.springframework.scheduling.annotation.EnableScheduling
         Tag(
             name = "Attachment",
             description = "Download stored mail attachments."
-        ),
-        Tag(
-            name = "IMAP Diagnostics",
-            description = "Inspect and trigger support mailbox imports."
         )
     ]
 )

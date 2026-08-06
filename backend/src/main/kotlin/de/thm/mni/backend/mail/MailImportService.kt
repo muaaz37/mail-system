@@ -24,7 +24,6 @@ class MailImportService(
     private val fileStorageService: FileStorageService,
     private val imapService: IMAPService,
     private val supportMailProperties: SupportMailProperties,
-    private val supportTicketService: SupportTicketService,
     private val supportTicketLifecycleService: SupportTicketLifecycleService,
     private val transactionTemplate: TransactionTemplate
 ) {
@@ -76,10 +75,11 @@ class MailImportService(
             externalSenderEmail = senderAddress?.address
             externalSenderName = senderAddress?.personal
             externalMessageId = normalizeMessageId(imapMail.messageId)
+            externalInReplyTo = imapMail.inReplyTo.toMessageIdHeaderValue()
+            externalReferences = imapMail.references.toMessageIdHeaderValue()
             externalTo = imapMail.to.ifEmpty { listOf(supportMailProperties.address) }.toRecipientString()
             externalCc = imapMail.cc.toRecipientString()
             externalReplyTo = imapMail.replyTo.toRecipientString()
-            ticketNumber = supportTicketService.extractTicketNumber(imapMail.subject)
             externalSentAt = imapMail.sentDate
                 ?.toInstant()
                 ?.atZone(ZoneId.systemDefault())

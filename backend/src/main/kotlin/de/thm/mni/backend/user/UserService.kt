@@ -23,13 +23,6 @@ class UserService(private val userRepository: UserRepository) {
     }
 
     /**
-     * Checks whether an email address is already registered.
-     */
-    fun existsUserByEmail(email: String): Boolean {
-        return userRepository.existsUserByEmail(email)
-    }
-
-    /**
      * Loads a user by email address.
      */
     fun getUserByEmail(email: String): User? {
@@ -37,25 +30,10 @@ class UserService(private val userRepository: UserRepository) {
     }
 
     /**
-     * Returns all registered users.
+     * Returns all local profiles synchronized from Keycloak.
      */
     fun getAllUsers(): List<User> {
         return userRepository.findAll().toList()
-    }
-
-    /**
-     * Replaces stored user profile data for the given user identifier.
-     */
-    fun updateUser(id: UUID, updatedUser: User): User {
-        updatedUser.id = id
-        return userRepository.save(updatedUser)
-    }
-
-    /**
-     * Deletes a user account by identifier.
-     */
-    fun deleteUser(id: UUID) {
-        userRepository.deleteById(id)
     }
 
     /**

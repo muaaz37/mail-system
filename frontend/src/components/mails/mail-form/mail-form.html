@@ -10,7 +10,7 @@
         @if (replyTemplate) {
           <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             <span class="font-semibold">Support ticket {{ replyTemplate.ticketNumber }}</span>
-            <span> will be included in the subject of this reply.</span>
+            <span> will be included in the subject. The primary recipient is locked to the original sender.</span>
           </div>
         }
       </div>
@@ -20,7 +20,7 @@
             <button
               type="button"
               class="rounded-xl border p-4 text-left transition"
-              [disabled]="!!replyTemplate"
+              [disabled]="isSupportReply()"
               [ngClass]="
                 deliveryMode() === MailDeliveryMode.INTERNAL
                   ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
@@ -30,7 +30,7 @@
             >
               <span class="block text-sm font-semibold">Internal user mail</span>
               <span class="mt-1 block text-xs opacity-80">
-                Select registered users. The message stays inside the application and is not sent via SMTP.
+                Select team users. The message stays inside the application and is not sent via SMTP.
               </span>
             </button>
             <button
@@ -94,7 +94,7 @@
           @if (deliveryMode() === MailDeliveryMode.INTERNAL) {
             <div class="rounded-xl border border-gray-200 bg-slate-50/60 p-4">
               <div class="mb-4">
-                <h3 class="text-sm font-semibold text-slate-800">Registered recipients</h3>
+                <h3 class="text-sm font-semibold text-slate-800">Team recipients</h3>
                 <p class="text-xs text-slate-500">
                   Your own account is excluded to prevent self-send duplicates and unclear inbox entries.
                 </p>
@@ -110,7 +110,7 @@
                     display="chip"
                     optionLabel="email"
                     optionValue="id"
-                    placeholder="Select registered recipients"
+                    placeholder="Select team recipients"
                     [maxSelectedLabels]="6"
                     class="w-full"
                   ></p-multiSelect>
@@ -171,6 +171,9 @@
                 <h3 class="text-sm font-semibold text-slate-800">External email recipients</h3>
                 <p class="text-xs text-slate-500">
                   Use commas, semicolons or spaces to separate multiple addresses.
+                  @if (isSupportReply()) {
+                    The To address is locked because support replies must go back to the original sender.
+                  }
                 </p>
               </div>
               <div class="grid gap-4">
@@ -182,7 +185,18 @@
                     pInputText
                     formControlName="externalTo"
                     placeholder="recipient@example.org"
+                    [readOnly]="isSupportReply()"
+                    [ngClass]="
+                      isSupportReply()
+                        ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-600'
+                        : ''
+                    "
                   />
+                  @if (isSupportReply()) {
+                    <small class="text-xs text-slate-500">
+                      Locked to the original sender. Additional recipients can be added with CC or BCC.
+                    </small>
+                  }
                 </div>
                 <div class="flex flex-col gap-2">
                   <label for="externalCc" class="text-sm font-semibold text-slate-700">CC</label>

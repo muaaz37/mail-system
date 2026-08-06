@@ -79,7 +79,7 @@ export class MailsService {
   }
 
   /**
-   * Loads registered users for internal mail recipient selection.
+   * Loads team profiles for internal mail recipient selection.
    *
    * @returns An observable containing all known application users.
    */

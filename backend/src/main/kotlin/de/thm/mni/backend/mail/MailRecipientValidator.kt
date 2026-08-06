@@ -41,7 +41,7 @@ class MailRecipientValidator {
     }
 
     /**
-     * Allows only registered users as recipients for internal delivery.
+     * Allows only existing team profiles as recipients for internal delivery.
      */
     private fun validateInternalRecipients(
         hasInternalRecipients: Boolean,
@@ -50,7 +50,7 @@ class MailRecipientValidator {
         internalRecipientIds: List<UUID>
     ) {
         if (!hasInternalRecipients || hasExternalRecipients) {
-            throw InvalidMailRequestException("Internal mails must use registered users only.")
+            throw InvalidMailRequestException("Internal mails must use existing team profiles only.")
         }
         if (internalRecipientIds.contains(sender.id)) {
             throw InvalidMailRequestException("You cannot send an internal mail to yourself.")

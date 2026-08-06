@@ -3,6 +3,7 @@ package de.thm.mni.backend.imap
 import de.thm.mni.backend.imap.dto.ImapMailAttachment
 import de.thm.mni.backend.imap.dto.ImapMailData
 import de.thm.mni.backend.imap.dto.ImapMailPreview
+import de.thm.mni.backend.mail.toMessageIdList
 import de.thm.mni.backend.smtp.SMTPService
 import jakarta.mail.Address
 import jakarta.mail.Message
@@ -27,7 +28,7 @@ class ImapMessageMapper {
             from = message.from?.firstOrNull()?.toString(),
             sentDate = message.sentDate,
             body = null,
-            messageId = message.getHeader("Message-ID")?.firstOrNull()
+            messageId = extractMessageIds(message, MESSAGE_ID_HEADER).firstOrNull()
         )
     }
 
@@ -43,7 +44,9 @@ class ImapMessageMapper {
             replyTo = extractAddresses(message.replyTo),
             sentDate = message.sentDate,
             body = extractBody(message),
-            messageId = message.getHeader("Message-ID")?.firstOrNull(),
+            messageId = extractMessageIds(message, MESSAGE_ID_HEADER).firstOrNull(),
+            inReplyTo = extractMessageIds(message, IN_REPLY_TO_HEADER),
+            references = extractMessageIds(message, REFERENCES_HEADER),
             systemGenerated = isSystemGenerated(message),
             attachments = extractAttachments(message)
         )
@@ -122,7 +125,20 @@ class ImapMessageMapper {
 
     private companion object {
         const val DEFAULT_ATTACHMENT_FILENAME = "attachment"
+        const val MESSAGE_ID_HEADER = "Message-ID"
+        const val IN_REPLY_TO_HEADER = "In-Reply-To"
+        const val REFERENCES_HEADER = "References"
     }
+}
+
+/**
+ * Extracts all message identifiers from a MIME header.
+ */
+private fun extractMessageIds(message: Message, headerName: String): List<String> {
+    return message.getHeader(headerName)
+        ?.flatMap { headerValue -> headerValue.toMessageIdList() }
+        ?.distinct()
+        ?: emptyList()
 }
 
 /**

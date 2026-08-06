@@ -53,7 +53,7 @@ class MailService(
     }
 
     /**
-     * Returns internal incoming mails plus imported support mails visible to all registered users.
+     * Returns internal incoming mails plus imported support mails visible to all team profiles.
      */
     fun getIncomingMailsForUser(userId: UUID): List<Mail> {
         val internalIncomingMails = mailRecordService.getAllIncomingMailsForUser(userId)
@@ -82,8 +82,11 @@ class MailService(
             throw ResourceCannotBeModifiedException("Only draft mails can be sent")
         }
 
-        if (mail.deliveryMode == MailDeliveryMode.EXTERNAL && !smtpService.sendEmail(mail)) {
-            throw MailSendFailedException("Mail could not be sent. The draft was kept for retry.")
+        if (mail.deliveryMode == MailDeliveryMode.EXTERNAL) {
+            supportReplyService.enforceTicketSubject(mail)
+            if (!smtpService.sendEmail(mail)) {
+                throw MailSendFailedException("Mail could not be sent. The draft was kept for retry.")
+            }
         }
 
         mail.status = MailStatus.SENT
@@ -101,6 +104,7 @@ class MailService(
      */
     @Transactional
     fun createMail(mail: MailCreate, sender: User, attachments: List<MultipartFile>): Mail {
+        supportReplyService.enforceReplyRecipient(mail)
         validateMail(mail, sender)
         val mailEntity = Mail(
             sender = sender,
@@ -131,6 +135,8 @@ class MailService(
     @Transactional
     fun updateMail(id: UUID, mail: MailUpdate, attachments: List<MultipartFile>): Mail {
         val existingMail = getMailById(id)!!
+        supportReplyService.enforceReplyRecipient(mail)
+        supportReplyService.enforceStoredReplyRecipient(existingMail, mail)
         validateMail(mail, existingMail.sender!!)
         existingMail.subject = mail.subject
         existingMail.content = mail.content

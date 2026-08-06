@@ -14,6 +14,8 @@ data class ImapMailData(
     val sentDate: Date?,
     val body: String?,
     val messageId: String?,
+    val inReplyTo: List<String>,
+    val references: List<String>,
     val systemGenerated: Boolean,
     val attachments: List<ImapMailAttachment>
 )

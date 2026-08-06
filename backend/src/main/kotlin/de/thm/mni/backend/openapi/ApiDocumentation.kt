@@ -28,7 +28,7 @@ class OpenApiConfiguration {
      * Defines the order in which API tags are displayed in Swagger UI.
      */
     private companion object {
-        val TAG_ORDER = listOf("User", "Mail", "Support Ticket", "Attachment", "IMAP Diagnostics")
+        val TAG_ORDER = listOf("User", "Mail", "Support Ticket", "Attachment")
     }
 }
 
@@ -95,17 +95,6 @@ annotation class UnauthorizedApiResponse
     content = [Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = Schema(implementation = AppError::class))]
 )
 annotation class NotFoundApiResponse
-
-/**
- * Documents the error response for conflict requests (HTTP 409).
- */
-@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
-@Retention(AnnotationRetention.RUNTIME)
-@ApiResponse(
-    responseCode = "409", description = "The request conflicts with the current resource state.",
-    content = [Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = Schema(implementation = AppError::class))]
-)
-annotation class ConflictApiResponse
 
 /**
  * Documents the error response for payload too large requests (HTTP 413).

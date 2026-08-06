@@ -86,12 +86,21 @@ export class MailForm implements OnInit, OnChanges {
   protected readonly MailDeliveryMode = MailDeliveryMode;
 
   /**
+   * Returns whether the form is currently composing a reply to an imported support mail.
+   *
+   * @returns True when backend-provided reply metadata is active.
+   */
+  protected isSupportReply(): boolean {
+    return this.replyTemplate !== null || this.hasStoredTicketContext();
+  }
+
+  /**
    * Returns the immutable ticket number shown next to the editable reply subject.
    *
    * @returns Ticket number for support replies or null for regular mails.
    */
   protected replyTicketNumber(): string | null {
-    return this.replyTemplate?.ticketNumber ?? null;
+    return this.replyTemplate?.ticketNumber ?? this.mailData?.ticketNumber ?? null;
   }
 
   /**
@@ -133,7 +142,7 @@ export class MailForm implements OnInit, OnChanges {
    * @param mode Delivery mode selected by the user.
    */
   protected setDeliveryMode(mode: MailDeliveryMode): void {
-    if (this.replyTemplate && mode !== MailDeliveryMode.EXTERNAL) {
+    if (this.isSupportReply() && mode !== MailDeliveryMode.EXTERNAL) {
       this.showWarning('Support replies must be sent as external mails.');
       return;
     }
@@ -147,7 +156,7 @@ export class MailForm implements OnInit, OnChanges {
   }
 
   /**
-   * Loads registered users for internal recipient selection and excludes the current user.
+   * Loads local user profiles for internal recipient selection and excludes the current user.
    */
   private loadUsers(): void {
     const currentUserId = this.authService.getCurrentUser()?.id;
@@ -188,7 +197,7 @@ export class MailForm implements OnInit, OnChanges {
     }
 
     this.mailForm.patchValue({
-      subject: this.mailData.subject,
+      subject: this.editableReplySubject(this.mailData.subject),
       content: this.mailData.content,
       deliveryMode: this.mailData.deliveryMode,
       externalTo: this.mailData.externalTo.join(', '),
@@ -272,7 +281,7 @@ export class MailForm implements OnInit, OnChanges {
   }
 
   /**
-   * Checks whether at least one registered user is selected as an internal recipient.
+   * Checks whether at least one team profile is selected as an internal recipient.
    *
    * @returns True when To, Cc or Bcc contains an internal user.
    */
@@ -309,7 +318,7 @@ export class MailForm implements OnInit, OnChanges {
     }
 
     if (this.deliveryMode() === MailDeliveryMode.INTERNAL && !this.internalRecipientsNotEmpty()) {
-      this.showWarning('Please select at least one registered user');
+      this.showWarning('Please select at least one team user');
       return false;
     }
 
@@ -383,7 +392,7 @@ export class MailForm implements OnInit, OnChanges {
    * @returns Editable subject without the immutable ticket prefix.
    */
   private editableReplySubject(subject: string): string {
-    if (!this.replyTemplate) {
+    if (!this.isSupportReply()) {
       return subject;
     }
 
@@ -401,6 +410,15 @@ export class MailForm implements OnInit, OnChanges {
     const subject = this.mailForm.controls.subject.value?.trim() ?? '';
     const ticketNumber = this.replyTicketNumber();
     return ticketNumber ? `[${ticketNumber}] ${this.editableReplySubject(subject)}`.trim() : subject;
+  }
+
+  /**
+   * Detects persisted support reply drafts where no fresh reply template is available.
+   *
+   * @returns True when an existing external draft is already linked to a support ticket.
+   */
+  private hasStoredTicketContext(): boolean {
+    return this.mailData?.deliveryMode === MailDeliveryMode.EXTERNAL && !!this.mailData.ticketNumber;
   }
 
   /**

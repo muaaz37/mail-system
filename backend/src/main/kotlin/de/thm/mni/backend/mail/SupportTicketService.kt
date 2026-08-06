@@ -52,7 +52,10 @@ class SupportTicketService(private val mailRepository: MailRepository) {
 
     private fun normalizeReplySubject(subject: String, ticketNumber: String): String {
         val subjectWithoutTickets = subject.replace(TICKET_REFERENCE_PATTERN, " ").trim()
-        val baseSubject = subjectWithoutTickets.replace(LEADING_REPLY_PREFIXES_PATTERN, "").trim()
+        val baseSubject = subjectWithoutTickets
+            .replace(LEADING_REPLY_PREFIXES_PATTERN, "")
+            .trim()
+            .ifBlank { DEFAULT_SUPPORT_SUBJECT }
         return "[$ticketNumber] $REPLY_PREFIX $baseSubject".trim()
     }
 
@@ -76,6 +79,7 @@ class SupportTicketService(private val mailRepository: MailRepository) {
     private companion object {
         const val REPLY_PREFIX = "Re:"
         const val TICKET_PREFIX = "TICKET-"
+        const val DEFAULT_SUPPORT_SUBJECT = "Support request"
         const val TICKET_DIGITS = 6
         const val TICKET_BOUND = 1_000_000
         val TICKET_PATTERN = Regex("\\b(TICKET-\\d{$TICKET_DIGITS})\\b", RegexOption.IGNORE_CASE)

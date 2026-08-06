@@ -6,12 +6,11 @@ import java.util.UUID
 
 
 /**
- * Provides database access for user accounts.
+ * Provides database access for local user profiles.
  */
 @Repository
 interface UserRepository: CrudRepository<User, UUID> {
     fun existsUserByEmail(email: String): Boolean
     fun findUserByEmail(email: String): User?
-    fun findByEmail(email: String): User?
     fun findByIdentitySubject(identitySubject: String): User?
 }
