@@ -1,22 +1,18 @@
 import { Component, inject } from '@angular/core';
-import {Router, RouterLink, RouterLinkActive} from '@angular/router';
-import {AuthService} from '../../../services/auth/auth-service';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService } from '../../../services/auth/auth-service';
 
 @Component({
   selector: 'app-side-navigation',
-  imports: [
-    RouterLink,
-    RouterLinkActive
-  ],
+  imports: [RouterLink, RouterLinkActive],
   templateUrl: './side-navigation.html',
   styleUrl: './side-navigation.css',
 })
-
 export class SideNavigation {
-   private router = inject(Router);
-   private authService = inject(AuthService);
+  private router = inject(Router);
+  private authService = inject(AuthService);
 
-   navigationItems = [
+  navigationItems = [
     {
       label: 'Open Tickets',
       description: 'Needs support',
@@ -54,11 +50,17 @@ export class SideNavigation {
     },
   ];
 
-  createMail() {
+  /**
+   * Opens the compose page for creating a new mail.
+   */
+  createMail(): void {
     this.router.navigate(['/mails/create']);
   }
 
-  logout(){
-    this.authService.logout()
+  /**
+   * Ends the current identity-provider session.
+   */
+  logout(): void {
+    this.authService.logout();
   }
 }

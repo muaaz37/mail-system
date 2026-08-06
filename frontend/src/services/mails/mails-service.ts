@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../constants';
 import { CreateMail, Mail, MailReplyTemplate, UpdateMail } from '../../types/mails';
 import { User } from '../../types/user';
@@ -10,67 +11,149 @@ import { User } from '../../types/user';
 export class MailsService {
   private http = inject(HttpClient);
 
-  public getIncomingMails() {
+  /**
+   * Loads all incoming mails visible to the authenticated support user.
+   *
+   * @returns An observable containing received internal mails and imported support mails.
+   */
+  public getIncomingMails(): Observable<Mail[]> {
     return this.http.get<Mail[]>(`${API_BASE_URL}/mails/incoming`);
   }
 
-  public getDrafts() {
+  /**
+   * Loads drafts created by the authenticated support user.
+   *
+   * @returns An observable containing editable draft mails.
+   */
+  public getDrafts(): Observable<Mail[]> {
     return this.http.get<Mail[]>(`${API_BASE_URL}/mails/drafts`);
   }
 
-  public getSentMails() {
+  /**
+   * Loads mails sent by the authenticated support user.
+   *
+   * @returns An observable containing sent mails.
+   */
+  public getSentMails(): Observable<Mail[]> {
     return this.http.get<Mail[]>(`${API_BASE_URL}/mails/sent`);
   }
 
-  public getMailById(id: string) {
+  /**
+   * Loads one mail including recipient, ticket and attachment metadata.
+   *
+   * @param id Mail identifier returned by the backend.
+   * @returns An observable containing the requested mail.
+   */
+  public getMailById(id: string): Observable<Mail> {
     return this.http.get<Mail>(`${API_BASE_URL}/mails/${id}`);
   }
 
-  public getReplyTemplate(id: string) {
+  /**
+   * Loads the server-generated reply template for an imported support mail.
+   *
+   * @param id Identifier of the mail that should be answered.
+   * @returns An observable containing prefilled external recipient and subject data.
+   */
+  public getReplyTemplate(id: string): Observable<MailReplyTemplate> {
     return this.http.get<MailReplyTemplate>(`${API_BASE_URL}/mails/${id}/reply-template`);
   }
 
-  public sendMail(id: string) {
+  /**
+   * Sends an existing draft mail without changing its content first.
+   *
+   * @param id Draft mail identifier.
+   * @returns An observable that completes when sending succeeds.
+   */
+  public sendMail(id: string): Observable<void> {
     return this.http.post<void>(`${API_BASE_URL}/mails/send/${id}`, {});
   }
 
-  public deleteMail(id: string) {
-    return this.http.delete(`${API_BASE_URL}/mails/${id}`);
+  /**
+   * Deletes a draft mail and its attachment metadata.
+   *
+   * @param id Mail identifier.
+   * @returns An observable that completes when deletion succeeds.
+   */
+  public deleteMail(id: string): Observable<void> {
+    return this.http.delete<void>(`${API_BASE_URL}/mails/${id}`);
   }
 
-  public getAllUsers() {
+  /**
+   * Loads registered users for internal mail recipient selection.
+   *
+   * @returns An observable containing all known application users.
+   */
+  public getAllUsers(): Observable<User[]> {
     return this.http.get<User[]>(`${API_BASE_URL}/users`);
   }
 
-  public createDraft(mail: CreateMail, files: File[]) {
+  /**
+   * Creates a draft mail with optional uploaded attachments.
+   *
+   * @param mail Draft payload with internal or external recipients.
+   * @param files Browser file objects selected by the user.
+   * @returns An observable containing the persisted draft.
+   */
+  public createDraft(mail: CreateMail, files: File[]): Observable<Mail> {
     const formData = this.createFormData(mail, files);
     return this.http.post<Mail>(`${API_BASE_URL}/mails`, formData);
   }
 
-  public createAndSendMail(mail: CreateMail, files: File[]) {
+  /**
+   * Creates a new mail and immediately sends it through the backend workflow.
+   *
+   * @param mail Mail payload with internal or external recipients.
+   * @param files Browser file objects selected by the user.
+   * @returns An observable containing the created sent mail.
+   */
+  public createAndSendMail(mail: CreateMail, files: File[]): Observable<Mail> {
     const formData = this.createFormData(mail, files);
     return this.http.post<Mail>(`${API_BASE_URL}/mails/send`, formData);
   }
 
-  public updateMails(id: string, mail: UpdateMail, files: File[]) {
+  /**
+   * Updates an existing draft mail and replaces its attachment set.
+   *
+   * @param id Draft mail identifier.
+   * @param mail Updated draft payload.
+   * @param files Current attachment files that should remain on the draft.
+   * @returns An observable containing the updated draft.
+   */
+  public updateMails(id: string, mail: UpdateMail, files: File[]): Observable<Mail> {
     const formData = this.createFormData(mail, files);
     return this.http.put<Mail>(`${API_BASE_URL}/mails/${id}`, formData);
   }
 
-  public fetchAttachment(filename: string) {
+  /**
+   * Downloads one attachment binary through the backend storage endpoint.
+   *
+   * @param filename Storage key or attachment path returned by the backend.
+   * @returns An observable containing the binary attachment blob.
+   */
+  public fetchAttachment(filename: string): Observable<Blob> {
     return this.http.get(`${API_BASE_URL}/images/${filename}`, { responseType: 'blob' });
   }
 
+  /**
+   * Builds the multipart request expected by the backend mail endpoints.
+   *
+   * @param mail JSON mail payload to send as the `data` part.
+   * @param files Attachment files to send as repeated `attachments` parts.
+   * @returns Multipart form data containing the JSON payload and attachment parts.
+   */
   private createFormData(mail: CreateMail | UpdateMail, files: File[]): FormData {
     const formData = new FormData();
     formData.append('data', new Blob([JSON.stringify(mail)], { type: 'application/json' }));
+
     if (files.length === 0) {
+      // Keep the multipart shape stable because the backend endpoint expects the attachments part.
       formData.append('attachments', new Blob([], { type: 'application/octet-stream' }));
     } else {
       files.forEach((file) => {
         formData.append('attachments', file);
       });
     }
+
     return formData;
   }
 }

@@ -1,5 +1,5 @@
-import { Component, inject, Input, OnInit, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, Input, OnInit, signal } from '@angular/core';
 import { MessageService } from 'primeng/api';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { Toast } from 'primeng/toast';
@@ -22,17 +22,30 @@ export class MailCreate implements OnInit {
   protected replyTemplate = signal<MailReplyTemplate | null>(null);
   protected isLoading = signal(false);
 
-  ngOnInit() {
+  /**
+   * Loads a reply template when the route represents a support-mail reply.
+   */
+  ngOnInit(): void {
     if (this.id) {
       this.loadReplyTemplate(this.id);
     }
   }
 
+  /**
+   * Selects the page title for create and reply modes.
+   *
+   * @returns User-facing page title.
+   */
   protected title(): string {
     return this.id ? 'Reply to support mail' : 'Create mail';
   }
 
-  private loadReplyTemplate(id: string) {
+  /**
+   * Loads backend-generated reply metadata for the selected support mail.
+   *
+   * @param id Identifier of the mail being answered.
+   */
+  private loadReplyTemplate(id: string): void {
     this.isLoading.set(true);
     this.mailsService.getReplyTemplate(id).subscribe({
       next: (template) => {

@@ -19,6 +19,11 @@ export class MailsListElement {
   protected readonly getSeverityBadge = getSeverityBadge;
   protected readonly getMailSenderDisplay = getMailSenderDisplay;
 
+  /**
+   * Normalizes the status label for mails shown inside the inbox context.
+   *
+   * @returns Status label displayed on the mail list card.
+   */
   getStatusLabel(): string {
     if (this.mailbox === 'inbox' && this.mail.status === 'SENT') {
       return 'INBOX';
@@ -27,6 +32,11 @@ export class MailsListElement {
     return this.mail.status;
   }
 
+  /**
+   * Describes whether a mail is an external request, support reply or internal message.
+   *
+   * @returns Conversation type label shown on the list card.
+   */
   getConversationType(): string {
     if (this.mail.deliveryMode === MailDeliveryMode.EXTERNAL && this.mail.sender === null) {
       return 'External incoming';
@@ -39,6 +49,11 @@ export class MailsListElement {
     return 'Internal mail';
   }
 
+  /**
+   * Builds a compact single-line preview from the mail body.
+   *
+   * @returns Shortened text preview for the list card.
+   */
   getPreview(): string {
     const content = this.mail.content?.replace(/\s+/g, ' ').trim();
     if (!content) {
@@ -48,6 +63,12 @@ export class MailsListElement {
     return content.length > 110 ? `${content.slice(0, 110).trim()}...` : content;
   }
 
+  /**
+   * Formats a timestamp as time for today or a compact date otherwise.
+   *
+   * @param dateString ISO timestamp returned by the backend.
+   * @returns User-facing short date label.
+   */
   formatDate(dateString: string): string {
     const date = new Date(dateString);
     const today = new Date();
@@ -65,7 +86,12 @@ export class MailsListElement {
     });
   }
 
-  navigateToMail(event?: Event) {
+  /**
+   * Opens the selected mail and suppresses default keyboard scrolling for space activation.
+   *
+   * @param event Optional click or keyboard event from the mail card.
+   */
+  navigateToMail(event?: Event): void {
     event?.preventDefault();
     this.router.navigate(['/mails', this.mail.id]);
   }

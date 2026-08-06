@@ -17,7 +17,9 @@ export class AuthService {
   private currentUser: User | null = null;
 
   /**
-   * Loads the identity provider metadata and processes a possible login callback.
+   * Loads identity provider metadata and processes a possible OIDC login callback once.
+   *
+   * @returns A shared promise that resolves when authentication bootstrap is finished.
    */
   public initialize(): Promise<void> {
     if (!this.initializationPromise) {
@@ -35,7 +37,7 @@ export class AuthService {
   }
 
   /**
-   * Ends the local session and redirects to the identity provider logout.
+   * Clears the cached profile and redirects to the identity provider logout endpoint.
    */
   public logout(): void {
     this.currentUser = null;
@@ -43,21 +45,27 @@ export class AuthService {
   }
 
   /**
-   * Returns whether a valid access token is available.
+   * Checks whether the browser currently holds a valid access token.
+   *
+   * @returns True when an unexpired access token is available.
    */
   public isAuthenticated(): boolean {
     return this.oauthService.hasValidAccessToken();
   }
 
   /**
-   * Returns the local application profile of the authenticated identity.
+   * Returns the local application profile linked to the authenticated OIDC identity.
+   *
+   * @returns The current profile, or null when no valid session is available.
    */
   public getCurrentUser(): User | null {
     return this.currentUser;
   }
 
   /**
-   * initialize the OIDC flow and load the current user
+   * Configures the OAuth client, handles login redirects and loads the backend user profile.
+   *
+   * @returns A promise that resolves after OIDC initialization completes.
    */
   private async initializeOidc(): Promise<void> {
     this.oauthService.configure(authConfig);
@@ -81,7 +89,9 @@ export class AuthService {
   }
 
   /**
-   * Loads the current authenticated user's profile from the backend API and stores it in the `currentUser`property.
+   * Loads the authenticated user's backend profile and caches it for UI decisions.
+   *
+   * @returns A promise that resolves after the profile is loaded.
    */
   private async loadCurrentUser(): Promise<void> {
     this.currentUser = await firstValueFrom(

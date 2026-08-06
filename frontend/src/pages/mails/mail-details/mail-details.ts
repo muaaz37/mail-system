@@ -52,19 +52,37 @@ export class MailDetails implements OnInit {
   protected mail = signal<Mail | null>(null);
   protected isLoading = signal(true);
 
-  ngOnInit() {
+  /**
+   * Loads the selected mail when the route parameter has been bound.
+   */
+  ngOnInit(): void {
     this.loadMail(this.id);
   }
 
+  /**
+   * Checks whether the authenticated user created the displayed mail.
+   *
+   * @returns True when the current user is the mail sender.
+   */
   isUserSender(): boolean {
     const mail = this.mail();
     return mail?.sender?.id === this.authService.getCurrentUser()?.id;
   }
 
+  /**
+   * Checks whether draft actions should be visible for the displayed mail.
+   *
+   * @returns True when the current user may edit, send or delete the draft.
+   */
   canManageDraft(): boolean {
     return this.isUserSender() && this.mail()?.status === MailStatus.DRAFT;
   }
 
+  /**
+   * Checks whether a support reply can be created from the displayed mail.
+   *
+   * @returns True for unresolved external received support mails.
+   */
   canReplyToSupportMail(): boolean {
     const mail = this.mail();
     return mail?.status === MailStatus.RECEIVED &&
@@ -74,6 +92,8 @@ export class MailDetails implements OnInit {
 
   /**
    * Determines if the current user can view the associated support ticket of the mail.
+   *
+   * @returns True when a ticket exists and the mail is not just the user's internal sent copy.
    */
   canViewTicket(): boolean {
     const mail = this.mail();
@@ -81,7 +101,12 @@ export class MailDetails implements OnInit {
       !(mail.deliveryMode === MailDeliveryMode.INTERNAL && this.isUserSender());
   }
 
-  private loadMail(id: string) {
+  /**
+   * Loads one mail and preloads attachment blobs for inline previews.
+   *
+   * @param id Mail identifier from the route.
+   */
+  private loadMail(id: string): void {
     this.isLoading.set(true);
     this.mailsService.getMailById(id).subscribe({
       next: (mail) => {
@@ -96,31 +121,50 @@ export class MailDetails implements OnInit {
     });
   }
 
-  private loadAttachmentPreview(attachment: Attachment) {
+  /**
+   * Loads one attachment blob and stores a safe object URL on the attachment model.
+   *
+   * @param attachment Attachment metadata that should receive preview data.
+   */
+  private loadAttachmentPreview(attachment: Attachment): void {
     this.mailsService.fetchAttachment(attachment.path).subscribe({
       next: (blob) => this.assignAttachmentBlob(attachment, blob),
       error: (err: HttpErrorResponse) => this.showError('Failed to Load Attachment', err),
     });
   }
 
-  goBack() {
+  /**
+   * Navigates back to the previous browser history entry.
+   */
+  goBack(): void {
     this.location.back();
   }
 
-  replyToSupportMail() {
+  /**
+   * Opens the compose page with a backend-generated support reply template.
+   */
+  replyToSupportMail(): void {
     const mail = this.mail();
     if (mail) {
       this.router.navigate(['/mails', mail.id, 'reply']);
     }
   }
 
-  viewTicket() {
+  /**
+   * Opens the support ticket connected to the displayed mail.
+   */
+  viewTicket(): void {
     const ticketId = this.mail()?.ticketId;
     if (ticketId) {
       this.router.navigate(['/mails/tickets', ticketId]);
     }
   }
 
+  /**
+   * Converts the backend ticket status into user-facing copy.
+   *
+   * @returns Label displayed in the mail detail header.
+   */
   ticketStatusLabel(): string {
     switch (this.mail()?.ticketStatus) {
       case SupportTicketStatus.WAITING_FOR_SUPPORT:
@@ -136,15 +180,33 @@ export class MailDetails implements OnInit {
     }
   }
 
+  /**
+   * Formats an ISO timestamp for display in the user's locale.
+   *
+   * @param dateString ISO timestamp returned by the backend.
+   * @returns Localized date and time string.
+   */
   formatDate(dateString: string): string {
     return new Date(dateString).toLocaleString();
   }
 
+  /**
+   * Formats internal recipients as readable name and email pairs.
+   *
+   * @param recipients Internal user recipients, if present.
+   * @returns Comma-separated recipient labels.
+   */
   getEmailString(recipients: User[] | undefined): string {
     if (!recipients) return '';
     return recipients.map((recipient) => this.formatUserRecipient(recipient)).join(', ');
   }
 
+  /**
+   * Builds the primary recipient summary for internal and external mails.
+   *
+   * @param mail Mail shown in the details view.
+   * @returns User-facing recipient summary.
+   */
   getToSummary(mail: Mail): string {
     if (mail.deliveryMode === MailDeliveryMode.EXTERNAL) {
       return mail.externalTo.join(', ') || 'Configured support mailbox';
@@ -152,26 +214,50 @@ export class MailDetails implements OnInit {
     return mail.to.map((recipient) => recipient.firstName).join(', ');
   }
 
+  /**
+   * Formats external recipient addresses.
+   *
+   * @param recipients External email recipients, if present.
+   * @returns Comma-separated email addresses.
+   */
   getExternalEmailString(recipients: string[] | undefined): string {
     return recipients?.join(', ') || '';
   }
 
+  /**
+   * Checks whether an attachment can be displayed as an image.
+   *
+   * @param attachment Attachment metadata returned by the backend.
+   * @returns True when the MIME type starts with image/.
+   */
   isImageAttachment(attachment: Attachment): boolean {
     return attachment.mimeType?.startsWith('image/') ?? false;
   }
 
+  /**
+   * Checks whether an attachment is a PDF document.
+   *
+   * @param attachment Attachment metadata returned by the backend.
+   * @returns True when MIME type or filename indicates a PDF.
+   */
   isPdfAttachment(attachment: Attachment): boolean {
     return attachment.mimeType === 'application/pdf' || attachment.fileName?.toLowerCase().endsWith('.pdf');
   }
 
-  editMail() {
+  /**
+   * Opens the draft edit page for the displayed mail.
+   */
+  editMail(): void {
     const mail = this.mail();
     if (mail) {
       this.router.navigate(['/mails', mail.id, 'edit']);
     }
   }
 
-  sendMail() {
+  /**
+   * Sends the displayed draft mail and navigates to the sent mailbox on success.
+   */
+  sendMail(): void {
     const mail = this.mail();
     if (mail?.status === MailStatus.DRAFT) {
       this.mailsService.sendMail(mail.id).subscribe({
@@ -188,7 +274,10 @@ export class MailDetails implements OnInit {
     }
   }
 
-  deleteMail() {
+  /**
+   * Deletes the displayed mail and returns to the draft mailbox on success.
+   */
+  deleteMail(): void {
     const mail = this.mail();
     if (mail) {
       this.mailsService.deleteMail(mail.id).subscribe({
@@ -205,7 +294,12 @@ export class MailDetails implements OnInit {
     }
   }
 
-  openAttachment(attachment: Attachment) {
+  /**
+   * Opens an attachment in a new browser tab after ensuring that a blob URL exists.
+   *
+   * @param attachment Attachment selected by the user.
+   */
+  openAttachment(attachment: Attachment): void {
     if (attachment.url) {
       window.open(attachment.url);
       return;
@@ -220,14 +314,26 @@ export class MailDetails implements OnInit {
     });
   }
 
-  private assignAttachmentBlob(attachment: Attachment, blob: Blob) {
+  /**
+   * Stores browser object URLs used for previews and opening downloaded attachments.
+   *
+   * @param attachment Attachment model that should receive the blob state.
+   * @param blob Binary attachment response returned by the backend.
+   */
+  private assignAttachmentBlob(attachment: Attachment, blob: Blob): void {
     const url = URL.createObjectURL(blob);
     attachment.url = url;
     attachment.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
     attachment.blob = blob;
   }
 
-  private showError(summary: string, err: HttpErrorResponse) {
+  /**
+   * Displays a sanitized API error in a toast.
+   *
+   * @param summary Short error title shown to the user.
+   * @param err HTTP error returned by the backend.
+   */
+  private showError(summary: string, err: HttpErrorResponse): void {
     this.messageService.add({
       severity: 'error',
       summary,
@@ -235,6 +341,12 @@ export class MailDetails implements OnInit {
     });
   }
 
+  /**
+   * Formats one internal user recipient for detail rows.
+   *
+   * @param recipient User recipient returned by the backend.
+   * @returns Full name with email address.
+   */
   private formatUserRecipient(recipient: User): string {
     return `${recipient.firstName} ${recipient.lastName} (${recipient.email})`;
   }

@@ -37,53 +37,100 @@ export class TicketDetails implements OnInit {
   private router = inject(Router);
   private location = inject(Location);
 
-  ngOnInit() {
+  /**
+   * Loads the selected ticket and lets the backend mark it as read for the current user.
+   */
+  ngOnInit(): void {
     this.loadTicket();
   }
 
-  goBack() {
+  /**
+   * Navigates back to the previous browser history entry.
+   */
+  goBack(): void {
     this.location.back();
   }
 
-  replyToSender() {
+  /**
+   * Opens the compose view for the latest external incoming mail in this ticket.
+   */
+  replyToSender(): void {
     const mailId = this.replyMailId();
     if (mailId) {
       this.router.navigate(['/mails', mailId, 'reply']);
     }
   }
 
-  openMail(mail: Mail) {
+  /**
+   * Opens a mail from the ticket conversation in the mail detail view.
+   *
+   * @param mail Conversation mail selected by the user.
+   */
+  openMail(mail: Mail): void {
     this.router.navigate(['/mails', mail.id]);
   }
 
-  assignToMe() {
+  /**
+   * Assigns the displayed ticket to the authenticated user.
+   */
+  assignToMe(): void {
     this.updateTicket(() => this.ticketsService.assignToMe(this.id), 'Ticket assigned to you');
   }
 
-  unassign() {
+  /**
+   * Removes the current assignee from the displayed ticket.
+   */
+  unassign(): void {
     this.updateTicket(() => this.ticketsService.unassign(this.id), 'Ticket unassigned');
   }
 
-  resolve() {
+  /**
+   * Marks the displayed ticket as resolved.
+   */
+  resolve(): void {
     this.updateTicket(() => this.ticketsService.resolve(this.id), 'Ticket resolved');
   }
 
-  reopen() {
+  /**
+   * Reopens the displayed ticket for further support work.
+   */
+  reopen(): void {
     this.updateTicket(() => this.ticketsService.reopen(this.id), 'Ticket reopened');
   }
 
-  updatePriority(priority: SupportTicketPriority) {
+  /**
+   * Updates the triage priority of the displayed ticket.
+   *
+   * @param priority New priority selected by the user.
+   */
+  updatePriority(priority: SupportTicketPriority): void {
     this.updateTicket(() => this.ticketsService.updatePriority(this.id, priority), 'Priority updated');
   }
 
+  /**
+   * Checks whether the user may answer the ticket from the current state.
+   *
+   * @returns True when there is an incoming mail and the ticket is not resolved.
+   */
   canReply(): boolean {
     return !!this.replyMailId() && this.ticket()?.status !== SupportTicketStatus.RESOLVED;
   }
 
+  /**
+   * Returns the currently displayed ticket metadata.
+   *
+   * @returns Ticket metadata, or null while the ticket is loading.
+   */
   ticket(): SupportTicket | null {
     return this.detail()?.ticket ?? null;
   }
 
+  /**
+   * Converts ticket workflow status into user-facing copy.
+   *
+   * @param status Backend ticket status.
+   * @returns Display label for the status tag.
+   */
   statusLabel(status: SupportTicketStatus): string {
     switch (status) {
       case SupportTicketStatus.WAITING_FOR_SUPPORT:
@@ -97,10 +144,22 @@ export class TicketDetails implements OnInit {
     }
   }
 
+  /**
+   * Formats an ISO timestamp for display in the user's locale.
+   *
+   * @param dateString ISO timestamp returned by the backend.
+   * @returns Localized date and time string.
+   */
   formatDate(dateString: string): string {
     return new Date(dateString).toLocaleString();
   }
 
+  /**
+   * Builds the sender label for internal mails, support replies and external incoming mails.
+   *
+   * @param mail Conversation mail returned with the ticket.
+   * @returns Display name for the message author.
+   */
   senderLabel(mail: Mail): string {
     if (mail.deliveryMode === MailDeliveryMode.EXTERNAL && mail.sender === null) {
       return mail.externalSenderName || mail.externalSenderEmail || 'External sender';
@@ -109,6 +168,12 @@ export class TicketDetails implements OnInit {
     return getMailSenderDisplay(mail).name;
   }
 
+  /**
+   * Describes how a conversation mail entered the support workflow.
+   *
+   * @param mail Conversation mail returned with the ticket.
+   * @returns Short context label for the message.
+   */
   senderContext(mail: Mail): string {
     if (mail.deliveryMode === MailDeliveryMode.EXTERNAL && mail.sender === null) {
       return 'External incoming mail';
@@ -121,6 +186,12 @@ export class TicketDetails implements OnInit {
     return 'Internal note/mail';
   }
 
+  /**
+   * Builds a compact preview from a conversation mail body.
+   *
+   * @param mail Conversation mail shown in the ticket timeline.
+   * @returns Shortened text preview.
+   */
   messagePreview(mail: Mail): string {
     const content = mail.content?.replace(/\s+/g, ' ').trim();
     if (!content) {
@@ -130,6 +201,12 @@ export class TicketDetails implements OnInit {
     return content.length > 240 ? `${content.slice(0, 240).trim()}...` : content;
   }
 
+  /**
+   * Maps ticket status to PrimeNG severity values.
+   *
+   * @param status Backend ticket status.
+   * @returns Severity value used by the status tag.
+   */
   statusSeverity(status: SupportTicketStatus): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     switch (status) {
       case SupportTicketStatus.RESOLVED:
@@ -143,7 +220,10 @@ export class TicketDetails implements OnInit {
     }
   }
 
-  private loadTicket() {
+  /**
+   * Loads ticket metadata and conversation mails from the backend.
+   */
+  private loadTicket(): void {
     this.isLoading.set(true);
     this.ticketsService.getTicket(this.id).subscribe({
       next: (detail) => {
@@ -157,6 +237,11 @@ export class TicketDetails implements OnInit {
     });
   }
 
+  /**
+   * Finds the latest external incoming mail that can be used as reply context.
+   *
+   * @returns Mail identifier used for reply routing, or null when no reply target exists.
+   */
   private replyMailId(): string | null {
     const mails = this.detail()?.mails ?? [];
     const incomingMail = [...mails]
@@ -166,7 +251,13 @@ export class TicketDetails implements OnInit {
     return incomingMail?.id ?? null;
   }
 
-  private updateTicket(request: () => ReturnType<TicketsService['resolve']>, successSummary: string) {
+  /**
+   * Executes one ticket command and updates the local detail signal with the returned ticket state.
+   *
+   * @param request Deferred service call for the selected ticket command.
+   * @param successSummary Toast summary shown after a successful command.
+   */
+  private updateTicket(request: () => ReturnType<TicketsService['resolve']>, successSummary: string): void {
     request().subscribe({
       next: (ticket) => {
         const current = this.detail();
@@ -179,7 +270,13 @@ export class TicketDetails implements OnInit {
     });
   }
 
-  private showError(summary: string, err: HttpErrorResponse) {
+  /**
+   * Displays a sanitized API error in a toast.
+   *
+   * @param summary Short error title shown to the user.
+   * @param err HTTP error returned by the backend.
+   */
+  private showError(summary: string, err: HttpErrorResponse): void {
     this.messageService.add({
       severity: 'error',
       summary,

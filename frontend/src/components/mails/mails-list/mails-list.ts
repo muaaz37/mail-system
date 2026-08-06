@@ -10,12 +10,16 @@ import { MailsListElement } from '../mails-list-element/mails-list-element';
   styleUrl: './mails-list.css',
 })
 export class MailsList {
-
-  @Input () mails: Mail[] = [];
+  @Input() mails: Mail[] = [];
   @Input() isLoading = false;
   @Input() title = '';
   @Input() mailbox: 'inbox' | 'sent' | 'drafts' = 'inbox';
 
+  /**
+   * Describes the currently displayed mailbox for the list header.
+   *
+   * @returns Context-specific mailbox description.
+   */
   get description(): string {
     switch (this.mailbox) {
       case 'sent':
@@ -27,6 +31,11 @@ export class MailsList {
     }
   }
 
+  /**
+   * Labels the primary list metric for the current mailbox.
+   *
+   * @returns Metric label displayed near the list count.
+   */
   get primaryMetricLabel(): string {
     switch (this.mailbox) {
       case 'sent':
@@ -38,6 +47,11 @@ export class MailsList {
     }
   }
 
+  /**
+   * Names the active mailbox view for compact UI context.
+   *
+   * @returns Short mailbox view label.
+   */
   get viewContext(): string {
     switch (this.mailbox) {
       case 'sent':
@@ -49,16 +63,30 @@ export class MailsList {
     }
   }
 
+  /**
+   * Counts mails that include at least one attachment.
+   *
+   * @returns Number of mails with attachments.
+   */
   get attachmentCount(): number {
     return this.mails.filter((mail) => mail.attachments.length > 0).length;
   }
 
+  /**
+   * Counts mails that belong to the external support-mail workflow.
+   *
+   * @returns Number of external mails in the current list.
+   */
   get externalCount(): number {
     return this.mails.filter((mail) => mail.deliveryMode === 'EXTERNAL').length;
   }
 
+  /**
+   * Counts mails that should draw support-team attention.
+   *
+   * @returns Number of received or failed mails in the current list.
+   */
   get needsAttentionCount(): number {
     return this.mails.filter((mail) => mail.status === MailStatus.RECEIVED || mail.status === MailStatus.ERROR).length;
   }
-
 }

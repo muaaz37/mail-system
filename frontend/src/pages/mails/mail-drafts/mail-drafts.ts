@@ -1,17 +1,15 @@
-import {Component, inject, OnInit, signal} from '@angular/core';
-import {MailsService} from '../../../services/mails/mails-service';
-import {MessageService} from 'primeng/api';
-import {Mail} from '../../../types/mails';
-import {MailsList} from '../../../components/mails/mails-list/mails-list';
-import {Toast} from 'primeng/toast';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { MessageService } from 'primeng/api';
+import { Toast } from 'primeng/toast';
+import { MailsList } from '../../../components/mails/mails-list/mails-list';
+import { MailsService } from '../../../services/mails/mails-service';
+import { Mail } from '../../../types/mails';
 import { readApiErrorMessage } from '../../../utils/api-error-message';
 
 @Component({
   selector: 'app-mail-drafts',
-  imports: [
-    MailsList,
-    Toast
-  ],
+  imports: [MailsList, Toast],
   templateUrl: './mail-drafts.html',
   styleUrl: './mail-drafts.css',
 })
@@ -22,18 +20,24 @@ export class MailDrafts implements OnInit {
   protected mails = signal<Mail[]>([]);
   protected isLoading = signal(true);
 
-  ngOnInit() {
+  /**
+   * Loads the authenticated user's drafts when the drafts page is opened.
+   */
+  ngOnInit(): void {
     this.loadMails();
   }
 
-  private loadMails() {
+  /**
+   * Loads editable draft mails for the authenticated user.
+   */
+  private loadMails(): void {
     this.isLoading.set(true);
     this.mailsService.getDrafts().subscribe({
       next: (mails) => {
         this.mails.set(mails);
         this.isLoading.set(false);
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Failed to Load Mails',

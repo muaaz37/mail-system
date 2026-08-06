@@ -1,5 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -32,15 +32,29 @@ export class TicketsPage implements OnInit {
   private messageService = inject(MessageService);
   private router = inject(Router);
 
-  ngOnInit() {
+  /**
+   * Configures the queue view from the current route and loads its tickets.
+   */
+  ngOnInit(): void {
     this.configureFromPath();
     this.loadTickets();
   }
 
-  openTicket(ticket: SupportTicket) {
+  /**
+   * Opens the detail view for a selected support ticket.
+   *
+   * @param ticket Ticket selected from the queue list.
+   */
+  openTicket(ticket: SupportTicket): void {
     this.router.navigate(['/mails/tickets', ticket.id]);
   }
 
+  /**
+   * Formats a timestamp as time for today or a compact date otherwise.
+   *
+   * @param dateString ISO timestamp returned by the backend.
+   * @returns User-facing short date label.
+   */
   formatDate(dateString: string): string {
     const date = new Date(dateString);
     const today = new Date();
@@ -52,10 +66,22 @@ export class TicketsPage implements OnInit {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
+  /**
+   * Builds the requester label shown on ticket cards.
+   *
+   * @param ticket Ticket returned by the backend.
+   * @returns Requester name, email or fallback text.
+   */
   requester(ticket: SupportTicket): string {
     return ticket.requesterName || ticket.requesterEmail || 'Unknown sender';
   }
 
+  /**
+   * Builds the assignment label shown on ticket cards.
+   *
+   * @param ticket Ticket returned by the backend.
+   * @returns Assignment text for the current ticket.
+   */
   assigneeLabel(ticket: SupportTicket): string {
     if (!ticket.assignedTo) {
       return 'Unassigned';
@@ -64,6 +90,12 @@ export class TicketsPage implements OnInit {
     return `Assigned to ${ticket.assignedTo.firstName}`;
   }
 
+  /**
+   * Converts backend ticket status into support-team wording.
+   *
+   * @param status Backend ticket status.
+   * @returns Display label for the status tag.
+   */
   statusLabel(status: SupportTicketStatus): string {
     switch (status) {
       case SupportTicketStatus.WAITING_FOR_SUPPORT:
@@ -77,10 +109,22 @@ export class TicketsPage implements OnInit {
     }
   }
 
+  /**
+   * Converts backend priority into compact queue-card wording.
+   *
+   * @param priority Backend priority value.
+   * @returns Lowercase priority label.
+   */
   priorityLabel(priority: SupportTicketPriority): string {
     return priority.toLowerCase();
   }
 
+  /**
+   * Maps ticket status to PrimeNG severity values.
+   *
+   * @param status Backend ticket status.
+   * @returns Severity value used by the status tag.
+   */
   statusSeverity(status: SupportTicketStatus): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     switch (status) {
       case SupportTicketStatus.RESOLVED:
@@ -94,6 +138,12 @@ export class TicketsPage implements OnInit {
     }
   }
 
+  /**
+   * Maps support priority to PrimeNG severity values.
+   *
+   * @param priority Backend priority value.
+   * @returns Severity value used by the priority tag.
+   */
   prioritySeverity(priority: SupportTicketPriority): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     switch (priority) {
       case SupportTicketPriority.URGENT:
@@ -107,7 +157,10 @@ export class TicketsPage implements OnInit {
     }
   }
 
-  private configureFromPath() {
+  /**
+   * Chooses the backend queue filter and page copy from the active route.
+   */
+  private configureFromPath(): void {
     const path = this.router.url;
     if (path.includes('/resolved')) {
       this.view = 'resolved';
@@ -125,7 +178,10 @@ export class TicketsPage implements OnInit {
     }
   }
 
-  private loadTickets() {
+  /**
+   * Loads tickets for the configured queue view.
+   */
+  private loadTickets(): void {
     this.isLoading.set(true);
     this.ticketsService.getTickets(this.view).subscribe({
       next: (tickets) => {

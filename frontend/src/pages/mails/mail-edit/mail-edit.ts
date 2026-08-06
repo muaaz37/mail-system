@@ -23,11 +23,19 @@ export class MailEdit implements OnInit {
   protected mail = signal<Mail | null>(null);
   protected isLoading = signal(true);
 
-  ngOnInit() {
+  /**
+   * Loads the draft selected by the edit route.
+   */
+  ngOnInit(): void {
     this.loadMail(this.id);
   }
 
-  private loadMail(id: string) {
+  /**
+   * Loads a draft and preloads attachment blobs so retained attachments can be resubmitted.
+   *
+   * @param id Draft mail identifier from the route.
+   */
+  private loadMail(id: string): void {
     this.isLoading.set(true);
     this.mailsService.getMailById(id).subscribe({
       next: (mail) => {
@@ -40,6 +48,7 @@ export class MailEdit implements OnInit {
         const attachmentLoads = mail.attachments.map((attachment) =>
           this.mailsService.fetchAttachment(attachment.path).pipe(
             map((blob) => {
+              // Draft updates replace the attachment set, so existing attachments need their blobs loaded.
               attachment.url = URL.createObjectURL(blob);
               attachment.blob = blob;
               return attachment;
