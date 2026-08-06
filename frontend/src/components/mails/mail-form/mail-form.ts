@@ -86,21 +86,27 @@ export class MailForm implements OnInit, OnChanges {
   protected readonly MailDeliveryMode = MailDeliveryMode;
 
   /**
-   * Returns whether the form is currently composing a reply to an imported support mail.
+   * Returns whether the form represents a new or persisted reply.
    *
-   * @returns True when backend-provided reply metadata is active.
+   * @returns True when reply-specific form behavior must be applied.
    */
-  protected isSupportReply(): boolean {
-    return this.replyTemplate !== null || this.hasStoredTicketContext();
+  protected isReply(): boolean {
+    return this.replyTemplate !== null || !!this.mailData?.replyToMailId || this.hasStoredTicketContext();
   }
 
   /**
-   * Returns the immutable ticket number shown next to the editable reply subject.
+   * Returns the immutable ticket number of an external support reply.
    *
-   * @returns Ticket number for support replies or null for regular mails.
+   * @returns Ticket number for an external reply or null otherwise.
    */
   protected replyTicketNumber(): string | null {
-    return this.replyTemplate?.ticketNumber ?? this.mailData?.ticketNumber ?? null;
+    const template = this.replyTemplate;
+
+    if (template?.deliveryMode === MailDeliveryMode.EXTERNAL) {
+      return template.ticketNumber;
+    }
+
+    return this.mailData?.ticketNumber ?? null;
   }
 
   /**
@@ -128,6 +134,20 @@ export class MailForm implements OnInit, OnChanges {
   }
 
   /**
+   * Formats the locked primary recipients of an internal reply.
+   *
+   * @returns Comma-separated email addresses for the selected internal users.
+   */
+  protected internalToDisplayValue(): string {
+    const selectedIds = new Set(this.selectedToUsers());
+
+    return this.availableUsers()
+      .filter((user) => selectedIds.has(user.id))
+      .map((user) => user.email)
+      .join(', ');
+  }
+
+  /**
    * Determines whether the component edits an existing draft.
    *
    * @returns True when the current mail data is an editable draft.
@@ -137,17 +157,29 @@ export class MailForm implements OnInit, OnChanges {
   }
 
   /**
-   * Switches between internal and external recipient fields while keeping reply rules valid.
+   * Changes the delivery mode for a regular mail.
+   *
+   * Replies retain the delivery channel of their original mail because the
+   * recipient context is generated and validated by the backend.
    *
    * @param mode Delivery mode selected by the user.
    */
   protected setDeliveryMode(mode: MailDeliveryMode): void {
-    if (this.isSupportReply() && mode !== MailDeliveryMode.EXTERNAL) {
-      this.showWarning('Support replies must be sent as external mails.');
+    const lockedReplyMode =
+      this.replyTemplate?.deliveryMode ??
+      (
+        this.mailData?.replyToMailId
+          ? this.mailData.deliveryMode
+          : null
+      );
+
+    if (lockedReplyMode && mode !== lockedReplyMode) {
+      this.showWarning('The delivery mode cannot be changed for a reply.');
       return;
     }
 
     this.mailForm.controls.deliveryMode.setValue(mode);
+
     if (mode === MailDeliveryMode.INTERNAL) {
       this.clearExternalRecipients();
     } else {
@@ -214,23 +246,39 @@ export class MailForm implements OnInit, OnChanges {
   }
 
   /**
-   * Prefills an external reply with backend-generated recipient and subject data.
+   * Initializes the form from trusted reply metadata returned by the backend.
+   *
+   * Internal and external templates are handled separately so that each
+   * delivery channel receives only its applicable recipient values.
    */
   private fillFromReplyTemplate(): void {
-    if (!this.replyTemplate) {
+    const template = this.replyTemplate;
+
+    if (!template) {
       return;
     }
 
-    this.mailForm.patchValue({
-      subject: this.editableReplySubject(this.replyTemplate.subject),
+    this.mailForm.reset({
+      subject: this.editableReplySubject(template.subject),
       content: '',
-      deliveryMode: MailDeliveryMode.EXTERNAL,
-      externalTo: this.replyTemplate.externalTo.join(', '),
-      externalCc: this.replyTemplate.externalCc.join(', '),
-      externalBcc: this.replyTemplate.externalBcc.join(', '),
-      externalReplyTo: this.replyTemplate.externalReplyTo.join(', '),
+      deliveryMode: template.deliveryMode,
+      externalTo: '',
+      externalCc: '',
+      externalBcc: '',
+      externalReplyTo: '',
     });
-    this.clearInternalRecipients();
+
+    this.selectedToUsers.set([]);
+    this.selectedCcUsers.set([]);
+    this.selectedBccUsers.set([]);
+    this.selectedReplyToUsers.set([]);
+
+    if (template.deliveryMode === MailDeliveryMode.INTERNAL) {
+      this.selectedToUsers.set(template.recipientIds);
+      return;
+    }
+
+    this.mailForm.controls.externalTo.setValue(template.recipients.join(', '));
   }
 
   /**
@@ -277,7 +325,10 @@ export class MailForm implements OnInit, OnChanges {
    * @returns True when the attachment has a PDF MIME type or filename.
    */
   protected isPdfAttachment(attachment: Attachment): boolean {
-    return attachment.mimeType === 'application/pdf' || attachment.fileName.toLowerCase().endsWith('.pdf');
+    return (
+      attachment.mimeType === 'application/pdf' ||
+      attachment.fileName.toLowerCase().endsWith('.pdf')
+    );
   }
 
   /**
@@ -366,7 +417,10 @@ export class MailForm implements OnInit, OnChanges {
         this.deliveryMode() === MailDeliveryMode.EXTERNAL
           ? this.parseEmailList(this.mailForm.controls.externalReplyTo.value)
           : [],
-      replyToMailId: this.replyTemplate?.replyToMailId ?? null,
+      replyToMailId:
+        this.replyTemplate?.replyToMailId ??
+        this.mailData?.replyToMailId ??
+        null,
     };
   }
 
@@ -386,13 +440,16 @@ export class MailForm implements OnInit, OnChanges {
   }
 
   /**
-   * Normalizes the editable part to exactly one reply prefix and no ticket number.
+   * Normalizes the editable subject of a reply.
    *
-   * @param subject Subject value from a reply template or form input.
-   * @returns Editable subject without the immutable ticket prefix.
+   * Ticket numbers and repeated reply prefixes are removed before exactly one
+   * reply prefix is restored.
+   *
+   * @param subject Subject returned by the backend or loaded from a draft.
+   * @returns Editable reply subject.
    */
   private editableReplySubject(subject: string): string {
-    if (!this.isSupportReply()) {
+    if (!this.isReply()) {
       return subject;
     }
 
@@ -402,14 +459,19 @@ export class MailForm implements OnInit, OnChanges {
   }
 
   /**
-   * Restores the immutable ticket prefix before the reply is sent to the backend.
+   * Builds the final subject sent to the backend.
    *
-   * @returns Full subject including the support ticket number for replies.
+   * External support replies retain their immutable ticket number. Internal
+   * replies use only the normalized reply subject.
+   *
+   * @returns Complete subject for the current mail.
    */
   private completeSubject(): string {
     const subject = this.mailForm.controls.subject.value?.trim() ?? '';
     const ticketNumber = this.replyTicketNumber();
-    return ticketNumber ? `[${ticketNumber}] ${this.editableReplySubject(subject)}`.trim() : subject;
+    return ticketNumber
+      ? `[${ticketNumber}] ${this.editableReplySubject(subject)}`.trim()
+      : subject;
   }
 
   /**
@@ -418,7 +480,9 @@ export class MailForm implements OnInit, OnChanges {
    * @returns True when an existing external draft is already linked to a support ticket.
    */
   private hasStoredTicketContext(): boolean {
-    return this.mailData?.deliveryMode === MailDeliveryMode.EXTERNAL && !!this.mailData.ticketNumber;
+    return (
+      this.mailData?.deliveryMode === MailDeliveryMode.EXTERNAL && !!this.mailData.ticketNumber
+    );
   }
 
   /**
@@ -616,25 +680,33 @@ export class MailForm implements OnInit, OnChanges {
   }
 
   /**
-   * Restores the form to the current draft, reply template or blank creation state.
+   * Restores the form to its initial draft, reply or compose state.
    */
   resetForm(): void {
+    this.uploadedFiles.set([]);
+
     if (this.mailData) {
       this.fillFromExistingMail();
-      this.uploadedFiles.set([]);
+      return;
+    }
+
+    if (this.replyTemplate) {
+      this.fillFromReplyTemplate();
+      this.attachments.set([]);
       return;
     }
 
     this.mailForm.reset({
-      subject: this.replyTemplate ? this.editableReplySubject(this.replyTemplate.subject) : '',
+      subject: '',
       content: '',
-      deliveryMode: this.replyTemplate ? MailDeliveryMode.EXTERNAL : MailDeliveryMode.INTERNAL,
-      externalTo: this.replyTemplate?.externalTo.join(', ') ?? '',
-      externalCc: this.replyTemplate?.externalCc.join(', ') ?? '',
-      externalBcc: this.replyTemplate?.externalBcc.join(', ') ?? '',
-      externalReplyTo: this.replyTemplate?.externalReplyTo.join(', ') ?? '',
+      deliveryMode: MailDeliveryMode.INTERNAL,
+      externalTo: '',
+      externalCc: '',
+      externalBcc: '',
+      externalReplyTo: '',
     });
+
     this.clearInternalRecipients();
-    this.uploadedFiles.set([]);
+    this.attachments.set([]);
   }
 }
