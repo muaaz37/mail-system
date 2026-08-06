@@ -36,7 +36,11 @@ class ImapDiagnosticsController(
      * Returns the number of unread messages currently visible through IMAP.
      */
     @GetMapping("/unread-count")
-    @Operation(operationId = "getUnreadImapCount", summary = "Count unread mailbox messages", description = "Returns the number of unread messages in the configured support mailbox.")
+    @Operation(
+        operationId = "getUnreadImapCount",
+        summary = "Count unread mailbox messages",
+        description = "Returns the number of unread messages in the configured support mailbox."
+    )
     @ApiResponse(responseCode = "200", description = "Unread message count returned successfully.")
     fun unreadCount(): Int {
         return imapService.countUnreadMessages()
@@ -46,7 +50,11 @@ class ImapDiagnosticsController(
      * Returns short unread message previews for troubleshooting imports.
      */
     @GetMapping("/unread-previews")
-    @Operation(operationId = "getUnreadImapPreviews", summary = "Preview unread mailbox messages", description = "Returns lightweight previews of unread support-mailbox messages for diagnostics.")
+    @Operation(
+        operationId = "getUnreadImapPreviews",
+        summary = "Preview unread mailbox messages",
+        description = "Returns lightweight previews of unread support-mailbox messages for diagnostics."
+    )
     @ApiResponse(responseCode = "200", description = "Unread message previews returned successfully.")
     fun unreadPreviews(): List<ImapMailPreview> {
         return imapService.getUnreadMailData()
@@ -56,7 +64,11 @@ class ImapDiagnosticsController(
      * Starts an immediate import run for unread messages.
      */
     @PostMapping("/import")
-    @Operation(operationId = "importUnreadImapMails", summary = "Import unread mailbox messages", description = "Triggers an immediate import from the configured support mailbox.")
+    @Operation(
+        operationId = "importUnreadImapMails",
+        summary = "Import unread mailbox messages",
+        description = "Triggers an immediate import from the configured support mailbox."
+    )
     @ApiResponse(responseCode = "200", description = "Import completed and imported mails returned successfully.")
     fun importMails(@AuthenticationPrincipal jwt: Jwt): List<MailDTO> {
         val user = mailAccessService.authenticatedUser(jwt)

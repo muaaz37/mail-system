@@ -15,12 +15,21 @@ data class MailRequest(
     @field:Schema(description = "Mail subject.", example = "Unable to access my account")
     @field:Size(min = 1, max = 500, message = "Subject must be between 1 and 500 characters")
     val subject: String,
-    @field:Schema(description = "Plain-text mail body.", example = "Hello, I cannot access my account. Could you please help me?")
+    @field:Schema(
+        description = "Plain-text mail body.",
+        example = "Hello, I cannot access my account. Could you please help me?"
+    )
     @field:Size(min = 1, max = 10000, message = "Content must be between 1 and 10000 characters")
     val content: String,
-    @field:Schema(description = "Selects internal application delivery or external SMTP delivery.", example = "EXTERNAL")
+    @field:Schema(
+        description = "Selects internal application delivery or external SMTP delivery.",
+        example = "EXTERNAL"
+    )
     val deliveryMode: MailDeliveryMode = MailDeliveryMode.INTERNAL,
-    @field:Schema(description = "Local user IDs returned by `GET /api/users`. Do not use an OpenID Connect `sub` value.")
+    @field:Schema(
+        description = "Local user IDs returned by `GET /api/users`. " +
+            "Do not use an OpenID Connect `sub` value."
+    )
     val toIds: MutableList<UUID> = mutableListOf(),
     @field:Schema(description = "Local user IDs returned by `GET /api/users` for the Cc field.")
     val ccIds: MutableList<UUID> = mutableListOf(),

@@ -60,7 +60,11 @@ class UserController(
      * Returns all registered users for internal recipient selection.
      */
     @GetMapping
-    @Operation(operationId = "getUsers", summary = "List users", description = "Returns all registered users available for internal recipient selection.")
+    @Operation(
+        operationId = "getUsers",
+        summary = "List users",
+        description = "Returns all registered users available for internal recipient selection."
+    )
     @ApiResponse(responseCode = "200", description = "Users returned successfully.")
     fun getAllUsers(): List<UserDTO> {
         return userService.getAllUsers().map { user -> user.toDTO() }
@@ -70,7 +74,11 @@ class UserController(
      * Returns one user by identifier when it exists.
      */
     @GetMapping("/{id}")
-    @Operation(operationId = "getUserById", summary = "Get a user", description = "Returns a user's public profile by identifier.")
+    @Operation(
+        operationId = "getUserById",
+        summary = "Get a user",
+        description = "Returns a user's public profile by identifier."
+    )
     @ApiResponse(responseCode = "200", description = "User returned successfully.")
     @NotFoundApiResponse
     fun getUserById(
@@ -84,7 +92,11 @@ class UserController(
      * Updates the authenticated user's own profile data.
      */
     @PutMapping("/{id}")
-    @Operation(operationId = "updateUser", summary = "Update a user profile", description = "Updates the authenticated user's own public profile.")
+    @Operation(
+        operationId = "updateUser",
+        summary = "Update a user profile",
+        description = "Updates the authenticated user's own public profile."
+    )
     @ApiResponse(responseCode = "200", description = "User profile updated successfully.")
     @BadRequestApiResponse
     @NotFoundApiResponse
@@ -113,7 +125,11 @@ class UserController(
      */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(operationId = "deleteUser", summary = "Delete a user account", description = "Deletes the authenticated user's own account.")
+    @Operation(
+        operationId = "deleteUser",
+        summary = "Delete a user account",
+        description = "Deletes the authenticated user's own account."
+    )
     @ApiResponse(responseCode = "204", description = "User account deleted successfully.")
     @NotFoundApiResponse
     fun deleteUser(

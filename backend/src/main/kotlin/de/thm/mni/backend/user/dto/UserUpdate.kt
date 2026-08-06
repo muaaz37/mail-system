@@ -16,7 +16,8 @@ data class UserUpdate(
     @field:Size(min = 1, message = "Last name must not be empty")
     val lastName: String,
     @field:Schema(
-        description = "Unique contact email stored in the local profile. Authentication data remains managed by the identity provider.",
+        description = "Unique contact email stored in the local profile. " +
+            "Authentication data remains managed by the identity provider.",
         example = "anna.schmidt@example.com"
     )
     @field:Email(message = "Email should be valid")

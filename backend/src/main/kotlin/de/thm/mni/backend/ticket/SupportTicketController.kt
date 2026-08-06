@@ -48,14 +48,20 @@ class SupportTicketController(
      * Lists shared support tickets. Supported views: open, waiting, resolved, all.
      */
     @GetMapping
-    @Operation(operationId = "getSupportTickets", summary = "List support tickets", description = "Returns support tickets filtered by the requested workflow view. Supported values are `open`, `waiting`, `resolved`, and `all`; unknown values use the `open` view.")
+    @Operation(
+        operationId = "getSupportTickets",
+        summary = "List support tickets",
+        description = "Returns support tickets filtered by the requested workflow view. " +
+            "Supported values are `open`, `waiting`, `resolved`, and `all`; unknown values use the `open` view."
+    )
     @ApiResponse(responseCode = "200", description = "Support tickets returned successfully.")
     fun getTickets(
-        @Parameter(description = "Workflow view used to filter tickets.", example = "open") @RequestParam(defaultValue = "open") view: String,
+        @Parameter(description = "Workflow view used to filter tickets.", example = "open")
+        @RequestParam(defaultValue = "open") view: String,
         @AuthenticationPrincipal jwt: Jwt
     ): List<SupportTicketDTO> {
         val user = mailAccessService.authenticatedUser(jwt)
-        // filter tickets based on view parameter and ensure that the user has access to them
+        // Apply visibility filtering after the workflow queue has been selected.
         return ticketLifecycleService.listTickets(view)
             .filter { ticket -> ticketAccessService.canView(ticket, user) }
             .map { ticket -> ticketMapper.toDTO(ticket, user) }
@@ -65,7 +71,11 @@ class SupportTicketController(
      * Returns a ticket with its complete mail conversation.
      */
     @GetMapping("/{ticketId}")
-    @Operation(operationId = "getSupportTicket", summary = "Get a support ticket", description = "Returns ticket metadata and its complete mail conversation and marks it as read.")
+    @Operation(
+        operationId = "getSupportTicket",
+        summary = "Get a support ticket",
+        description = "Returns ticket metadata and its complete mail conversation and marks it as read."
+    )
     @ApiResponse(responseCode = "200", description = "Support ticket returned successfully.")
     @NotFoundApiResponse
     fun getTicket(
@@ -87,7 +97,11 @@ class SupportTicketController(
      * Assigns the ticket to the current user.
      */
     @PostMapping("/{ticketId}/assign/me")
-    @Operation(operationId = "assignSupportTicketToMe", summary = "Assign a ticket to me", description = "Assigns the support ticket to the authenticated user.")
+    @Operation(
+        operationId = "assignSupportTicketToMe",
+        summary = "Assign a ticket to me",
+        description = "Assigns the support ticket to the authenticated user."
+    )
     @ApiResponse(responseCode = "200", description = "Support ticket assigned successfully.")
     @NotFoundApiResponse
     fun assignToMe(
@@ -105,7 +119,11 @@ class SupportTicketController(
      * Removes the current assignee from the ticket.
      */
     @DeleteMapping("/{ticketId}/assign")
-    @Operation(operationId = "unassignSupportTicket", summary = "Unassign a ticket", description = "Removes the current assignee from the support ticket.")
+    @Operation(
+        operationId = "unassignSupportTicket",
+        summary = "Unassign a ticket",
+        description = "Removes the current assignee from the support ticket."
+    )
     @ApiResponse(responseCode = "200", description = "Support ticket unassigned successfully.")
     @NotFoundApiResponse
     fun unassign(
@@ -123,7 +141,11 @@ class SupportTicketController(
      * Marks a ticket as resolved.
      */
     @PostMapping("/{ticketId}/resolve")
-    @Operation(operationId = "resolveSupportTicket", summary = "Resolve a ticket", description = "Marks the support ticket as resolved.")
+    @Operation(
+        operationId = "resolveSupportTicket",
+        summary = "Resolve a ticket",
+        description = "Marks the support ticket as resolved."
+    )
     @ApiResponse(responseCode = "200", description = "Support ticket resolved successfully.")
     @NotFoundApiResponse
     fun resolve(
@@ -141,7 +163,11 @@ class SupportTicketController(
      * Reopens a resolved ticket manually.
      */
     @PostMapping("/{ticketId}/reopen")
-    @Operation(operationId = "reopenSupportTicket", summary = "Reopen a ticket", description = "Moves a resolved support ticket back into the active workflow.")
+    @Operation(
+        operationId = "reopenSupportTicket",
+        summary = "Reopen a ticket",
+        description = "Moves a resolved support ticket back into the active workflow."
+    )
     @ApiResponse(responseCode = "200", description = "Support ticket reopened successfully.")
     @NotFoundApiResponse
     fun reopen(
@@ -159,7 +185,11 @@ class SupportTicketController(
      * Updates ticket priority.
      */
     @PutMapping("/{ticketId}/priority")
-    @Operation(operationId = "updateSupportTicketPriority", summary = "Update ticket priority", description = "Changes the workflow priority of a support ticket.")
+    @Operation(
+        operationId = "updateSupportTicketPriority",
+        summary = "Update ticket priority",
+        description = "Changes the workflow priority of a support ticket."
+    )
     @ApiResponse(responseCode = "200", description = "Support ticket priority updated successfully.")
     @BadRequestApiResponse
     @NotFoundApiResponse

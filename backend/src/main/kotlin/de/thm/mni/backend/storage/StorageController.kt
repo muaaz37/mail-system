@@ -30,7 +30,11 @@ class StorageController(private val fileStorageService: FileStorageService) {
      * Loads a stored resource by object key and returns it with stored media metadata.
      */
     @GetMapping("/{objectKey}")
-    @Operation(operationId = "downloadAttachment", summary = "Download an attachment", description = "Returns stored attachment content with its original media type and length metadata.")
+    @Operation(
+        operationId = "downloadAttachment",
+        summary = "Download an attachment",
+        description = "Returns stored attachment content with its original media type and length metadata."
+    )
     @ApiResponse(responseCode = "200", description = "Attachment returned successfully.")
     @NotFoundApiResponse
     @BadGatewayApiResponse
