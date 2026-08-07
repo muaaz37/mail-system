@@ -3,7 +3,7 @@ package de.thm.mni.backend.imap
 import de.thm.mni.backend.imap.dto.ImapMailAttachment
 import de.thm.mni.backend.imap.dto.ImapMailData
 import de.thm.mni.backend.imap.dto.ImapMailPreview
-import de.thm.mni.backend.mail.toMessageIdList
+import de.thm.mni.backend.mail.external.toMessageIdList
 import de.thm.mni.backend.smtp.SMTPService
 import jakarta.mail.Address
 import jakarta.mail.Message
