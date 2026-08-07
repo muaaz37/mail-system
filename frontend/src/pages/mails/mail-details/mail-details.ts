@@ -51,6 +51,9 @@ export class MailDetails implements OnInit {
 
   protected mail = signal<Mail | null>(null);
   protected isLoading = signal(true);
+  protected conversation = signal<Mail[]>([]);
+  protected isConversationLoading = signal(false);
+  protected isConversationVisible = signal(false);
 
   /**
    * Loads the selected mail when the route parameter has been bound.
@@ -109,9 +112,40 @@ export class MailDetails implements OnInit {
    */
   canViewTicket(): boolean {
     const mail = this.mail();
-    return (
-      !!mail?.ticketId && !(mail.deliveryMode === MailDeliveryMode.INTERNAL && this.isUserSender())
-    );
+    return mail?.deliveryMode === MailDeliveryMode.EXTERNAL && !!mail.ticketId;
+  }
+
+  /** Returns whether the internal conversation action is available. */
+  canViewConversation(): boolean {
+    const mail = this.mail();
+    return mail?.deliveryMode === MailDeliveryMode.INTERNAL && mail.status === MailStatus.SENT;
+  }
+
+  /** Loads the internal conversation once and toggles its visibility. */
+  toggleConversation(): void {
+    const mail = this.mail();
+    if (!mail || !this.canViewConversation()) return;
+
+    if (this.isConversationVisible()) {
+      this.isConversationVisible.set(false);
+      return;
+    }
+
+    this.isConversationVisible.set(true);
+    if (this.conversation().length || this.isConversationLoading()) return;
+
+    this.isConversationLoading.set(true);
+    this.mailsService.getInternalConversation(mail.id).subscribe({
+      next: (conversation) => {
+        this.conversation.set(conversation);
+        this.isConversationLoading.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.isConversationVisible.set(false);
+        this.isConversationLoading.set(false);
+        this.showError('Failed to Load Conversation', err);
+      },
+    });
   }
 
   /**
@@ -121,6 +155,8 @@ export class MailDetails implements OnInit {
    */
   private loadMail(id: string): void {
     this.isLoading.set(true);
+    this.conversation.set([]);
+    this.isConversationVisible.set(false);
     this.mailsService.getMailById(id).subscribe({
       next: (mail) => {
         mail.attachments.forEach((attachment) => this.loadAttachmentPreview(attachment));

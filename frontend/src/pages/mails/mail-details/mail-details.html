@@ -48,6 +48,17 @@
           View ticket
         </button>
       }
+      @if (canViewConversation()) {
+        <button
+          type="button"
+          (click)="toggleConversation()"
+          class="ticket-link-button"
+          aria-label="Show internal message conversation"
+        >
+          <i class="pi pi-comments"></i>
+          {{ isConversationVisible() ? 'Hide conversation' : 'View conversation' }}
+        </button>
+      }
       @if (canManageDraft()) {
         <p-button
           (click)="sendMail()"
@@ -70,14 +81,6 @@
           class="p-button-text p-button-rounded p-button-secondary"
           pTooltip="Delete Mail"
         />
-      } @else if (isUserSender()) {
-        <p-button
-          (click)="deleteMail()"
-          severity="secondary"
-          icon="pi pi-trash"
-          class="p-button-text p-button-rounded p-button-secondary"
-          pTooltip="Delete Mail"
-        />
       }
     </div>
   </div>
@@ -92,16 +95,22 @@
         <div class="px-8 py-6 border-b border-gray-100">
           <div class="flex justify-between items-center gap-4">
             <div>
-              @if (mail()!.ticketNumber) {
+              @if (
+                mail()!.deliveryMode === MailDeliveryMode.EXTERNAL && mail()!.ticketNumber
+              ) {
                 <p class="mb-2 text-sm font-semibold text-amber-700">{{ mail()!.ticketNumber }}</p>
               }
               <h1 class="text-2xl font-semibold text-gray-800">{{ mail()!.subject }}</h1>
             </div>
             <div class="flex items-center gap-2">
-              @if (mail()!.ticketStatus) {
+              @if (
+                mail()!.deliveryMode === MailDeliveryMode.EXTERNAL && mail()!.ticketStatus
+              ) {
                 <p-tag [value]="ticketStatusLabel()" severity="warn"></p-tag>
               }
-              @if (mail()!.ticketPriority) {
+              @if (
+                mail()!.deliveryMode === MailDeliveryMode.EXTERNAL && mail()!.ticketPriority
+              ) {
                 <p-tag
                   [value]="mail()!.ticketPriority!.toLowerCase() + ' priority'"
                   severity="secondary"
@@ -273,6 +282,66 @@
           </div>
         }
       </div>
+
+      @if (isConversationVisible()) {
+        <section class="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <header class="flex items-center justify-between gap-4 border-b border-gray-200 px-6 py-5">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Internal message</p>
+              <h2 class="mt-1 text-xl font-semibold text-gray-800">Conversation</h2>
+            </div>
+            @if (!isConversationLoading()) {
+              <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                {{ conversation().length }}
+                {{ conversation().length === 1 ? 'message' : 'messages' }}
+              </span>
+            }
+          </header>
+
+          @if (isConversationLoading()) {
+            <div class="flex min-h-40 items-center justify-center">
+              <p-progress-spinner strokeWidth="4" />
+            </div>
+          } @else {
+            <div class="space-y-4 bg-gray-50 p-6">
+              @for (conversationMail of conversation(); track conversationMail.id) {
+                <article
+                  class="rounded-xl border bg-white p-5"
+                  [class.border-blue-300]="conversationMail.id === mail()!.id"
+                  [class.border-gray-200]="conversationMail.id !== mail()!.id"
+                >
+                  <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                      <p-avatar
+                        [label]="getMailSenderDisplay(conversationMail).initials"
+                        shape="circle"
+                        [style]="{ 'background-color': '#dee2e6', color: '#495057' }"
+                      />
+                      <div>
+                        <p class="font-semibold text-gray-900">
+                          {{ getMailSenderDisplay(conversationMail).name }}
+                        </p>
+                        <p class="text-xs text-gray-500">
+                          To: {{ getToSummary(conversationMail) }}
+                        </p>
+                      </div>
+                    </div>
+                    <time class="text-xs text-gray-500">
+                      {{ formatDate(conversationMail.sentAt || conversationMail.createdAt) }}
+                    </time>
+                  </div>
+                  <h3 class="mt-4 font-semibold text-gray-800">{{ conversationMail.subject }}</h3>
+                  <div class="mt-2 whitespace-pre-wrap leading-relaxed text-gray-700">
+                    {{ conversationMail.content }}
+                  </div>
+                </article>
+              } @empty {
+                <p class="py-8 text-center text-gray-500">No conversation messages found.</p>
+              }
+            </div>
+          }
+        </section>
+      }
     </div>
   } @else {
     <div class="flex flex-col items-center justify-center h-96 text-gray-400">
