@@ -1,4 +1,4 @@
-package de.thm.mni.backend.mail
+package de.thm.mni.backend.mail.external
 
 /**
  * Extracts normalized RFC message identifiers from mail threading headers.
