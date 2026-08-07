@@ -34,14 +34,21 @@ class MailAccessService(
      * Allows access for senders, internal recipients and imported support mails.
      */
     fun ensureMailVisible(mail: Mail, user: User) {
+        if (!canViewMail(mail, user)) {
+            throw ResourceNotFoundException("Mail not found")
+        }
+    }
+
+    /**
+     * Checks whether a mail belongs to the authenticated user's visible mailbox.
+     */
+    fun canViewMail(mail: Mail, user: User): Boolean {
         val records = mailRecordService.getMailRecordByMailId(mail.id!!)
         val isInternalSender = mail.sender?.id == user.id
         val isInternalRecipient = records.any { record -> record.user?.id == user.id }
         val isImportedSupportMail = mail.status == MailStatus.RECEIVED && mail.sender == null
 
-        if (!isImportedSupportMail && !isInternalSender && !isInternalRecipient) {
-            throw ResourceNotFoundException("Mail not found")
-        }
+        return isImportedSupportMail || isInternalSender || isInternalRecipient
     }
 
     /**

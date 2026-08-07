@@ -20,10 +20,8 @@ class InternalReplyService(
 ) {
 
     /**
-     * Links an internal reply to its original mail and preserves an existing
-     * ticket conversation.
-     *
-     * A regular internal mail without a ticket remains ticketless.
+     * Links an internal reply to its original mail without entering the
+     * external support-ticket lifecycle.
      */
     fun applyReplyContext(
         replyMail: Mail,
@@ -38,9 +36,8 @@ class InternalReplyService(
         ensureOriginalMailReplyable(originalMail)
 
         replyMail.inReplyToMail = originalMail
-        replyMail.ticket = originalMail.ticket
-        replyMail.ticketNumber = originalMail.ticket?.ticketNumber
-            ?: originalMail.ticketNumber
+        replyMail.ticket = null
+        replyMail.ticketNumber = null
     }
 
     /**

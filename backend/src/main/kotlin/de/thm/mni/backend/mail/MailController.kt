@@ -7,6 +7,8 @@ import de.thm.mni.backend.mail.dto.MailRequest
 import de.thm.mni.backend.mail.dto.toMailCreate
 import de.thm.mni.backend.mail.dto.toMailUpdate
 import de.thm.mni.backend.mail.enums.MailStatus
+import de.thm.mni.backend.mail.enums.MailDeliveryMode
+import de.thm.mni.backend.mailrecord.MailRecordService
 import de.thm.mni.backend.openapi.BearerAuthenticated
 import de.thm.mni.backend.openapi.DefaultApiErrors
 import de.thm.mni.backend.openapi.BadGatewayApiResponse
@@ -49,7 +51,9 @@ class MailController(
     private val mailService: MailService,
     private val mailAccessService: MailAccessService,
     private val mailMapper: MailMapper,
-    private val mailReplyService: MailReplyService
+    private val mailReplyService: MailReplyService,
+    private val internalMailConversationService: InternalMailConversationService,
+    private val mailRecordService: MailRecordService
 ) {
     /**
      * Returns draft mails owned by the authenticated user.
@@ -150,6 +154,36 @@ class MailController(
     }
 
     /**
+     * Returns the complete visible conversation containing an internal mail.
+     */
+    @GetMapping("/{mailId}/conversation")
+    @Operation(
+        operationId = "getInternalMailConversation",
+        summary = "Get an internal mail conversation",
+        description = "Returns the root internal mail and all replies in chronological order."
+    )
+    @ApiResponse(responseCode = "200", description = "Internal conversation returned successfully.")
+    @NotFoundApiResponse
+    fun getInternalMailConversation(
+        @Parameter(description = "Identifier of any mail in the internal conversation.")
+        @PathVariable mailId: UUID,
+        @AuthenticationPrincipal jwt: Jwt
+    ): List<MailDTO> {
+        val user = mailAccessService.authenticatedUser(jwt)
+        val mail = mailAccessService.mailOrNotFound(mailId)
+        mailAccessService.ensureMailVisible(mail, user)
+
+        val conversation = internalMailConversationService.getConversation(mail)
+            .filter { item -> mailAccessService.canViewMail(item, user) }
+
+        conversation.forEach { item ->
+            mailRecordService.markMailRead(requireNotNull(item.id), requireNotNull(user.id))
+        }
+
+        return conversation.map { item -> mailMapper.toDTO(user, item) }
+    }
+
+    /**
      * Returns a single mail when the authenticated user is allowed to view it.
      */
     @GetMapping("/{mailId}")
@@ -167,6 +201,9 @@ class MailController(
         val user = mailAccessService.authenticatedUser(jwt)
         val mail = mailAccessService.mailOrNotFound(mailId)
         mailAccessService.ensureMailVisible(mail, user)
+        if (mail.deliveryMode == MailDeliveryMode.INTERNAL) {
+            mailRecordService.markMailRead(mailId, requireNotNull(user.id))
+        }
         return mailMapper.toDTO(user, mail)
     }
 
