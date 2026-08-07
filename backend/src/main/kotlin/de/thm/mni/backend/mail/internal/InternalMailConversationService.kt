@@ -1,6 +1,8 @@
-package de.thm.mni.backend.mail
+package de.thm.mni.backend.mail.internal
 
 import de.thm.mni.backend.error.ResourceNotFoundException
+import de.thm.mni.backend.mail.Mail
+import de.thm.mni.backend.mail.MailRepository
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

@@ -8,6 +8,7 @@ import de.thm.mni.backend.mail.dto.toMailCreate
 import de.thm.mni.backend.mail.dto.toMailUpdate
 import de.thm.mni.backend.mail.enums.MailStatus
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
+import de.thm.mni.backend.mail.internal.InternalMailConversationService
 import de.thm.mni.backend.mailrecord.MailRecordService
 import de.thm.mni.backend.openapi.BearerAuthenticated
 import de.thm.mni.backend.openapi.DefaultApiErrors
