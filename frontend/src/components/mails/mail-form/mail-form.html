@@ -9,7 +9,12 @@
         </p>
         @if (replyTemplate) {
           <div
-            class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800"
+            class="mt-4 rounded-xl border px-4 py-3 text-sm"
+            [ngClass]="
+              replyTemplate.deliveryMode === MailDeliveryMode.EXTERNAL
+                ? 'border-amber-200 bg-amber-50 text-amber-900'
+                : 'border-slate-200 bg-slate-50 text-slate-800'
+            "
           >
             <div class="flex items-center gap-2">
               <i class="pi pi-reply"></i>
@@ -26,7 +31,12 @@
             </div>
 
             <p class="mt-1 text-xs text-slate-600">
-              The primary recipient and delivery mode are derived from the original message.
+              @if (replyTemplate.deliveryMode === MailDeliveryMode.EXTERNAL) {
+                The ticket number will be included in the subject. The primary recipient is locked to
+                the original sender.
+              } @else {
+                The primary recipient and delivery mode are derived from the original message.
+              }
             </p>
           </div>
         }
@@ -93,6 +103,12 @@
             @if (mailForm.get('subject')?.invalid && mailForm.get('subject')?.touched) {
               <small class="mt-1 text-sm text-red-600">
                 Subject is required and must be between 1 and 120 characters
+              </small>
+            }
+            @if (isSupportReply()) {
+              <small class="text-xs text-slate-500">
+                Sent subject:
+                <span class="font-semibold text-slate-700">{{ completeSubject() }}</span>
               </small>
             }
           </div>

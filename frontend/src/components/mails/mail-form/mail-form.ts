@@ -110,6 +110,18 @@ export class MailForm implements OnInit, OnChanges {
   }
 
   /**
+   * Returns whether the form is bound to an external support reply.
+   *
+   * @returns True when a ticket number must be kept in the outgoing subject.
+   */
+  protected isSupportReply(): boolean {
+    return (
+      this.replyTemplate?.deliveryMode === MailDeliveryMode.EXTERNAL ||
+      this.hasStoredTicketContext()
+    );
+  }
+
+  /**
    * Loads selectable internal recipients and initializes the form state.
    */
   ngOnInit(): void {
@@ -466,7 +478,7 @@ export class MailForm implements OnInit, OnChanges {
    *
    * @returns Complete subject for the current mail.
    */
-  private completeSubject(): string {
+  protected completeSubject(): string {
     const subject = this.mailForm.controls.subject.value?.trim() ?? '';
     const ticketNumber = this.replyTicketNumber();
     return ticketNumber

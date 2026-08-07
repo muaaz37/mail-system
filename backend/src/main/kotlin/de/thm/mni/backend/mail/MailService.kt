@@ -159,6 +159,7 @@ class MailService(
             replyMail = existingMail,
             replyToMailId = originalMailId
         )
+        supportReplyService.enforceTicketSubject(existingMail)
         mailAttachmentHandler.replaceAttachments(existingMail, attachments)
 
         val updatedMail = mailRepository.save(existingMail)
