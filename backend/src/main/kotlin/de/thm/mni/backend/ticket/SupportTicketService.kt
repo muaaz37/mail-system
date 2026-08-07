@@ -1,5 +1,7 @@
-package de.thm.mni.backend.mail
+package de.thm.mni.backend.ticket
 
+import de.thm.mni.backend.mail.Mail
+import de.thm.mni.backend.mail.MailRepository
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
 import java.security.SecureRandom
@@ -50,6 +52,9 @@ class SupportTicketService(private val mailRepository: MailRepository) {
         return normalizeReplySubject(subject, ticketNumber)
     }
 
+    /**
+     * Normalizes a subject line to include exactly one ticket number and one reply prefix.
+     */
     private fun normalizeReplySubject(subject: String, ticketNumber: String): String {
         val subjectWithoutTickets = subject.replace(TICKET_REFERENCE_PATTERN, " ").trim()
         val baseSubject = subjectWithoutTickets
@@ -71,11 +76,17 @@ class SupportTicketService(private val mailRepository: MailRepository) {
         return ticketNumber
     }
 
+    /**
+     * Removes a ticket number prefix from a subject, if present.
+     */
     fun removeTicketPrefix(subject: String): String {
         return subject.replace(Regex("^\\s*\\[$TICKET_PREFIX\\d{$TICKET_DIGITS}\\]\\s*", RegexOption.IGNORE_CASE), "")
             .trim()
     }
 
+    /**
+     * Removes the reply prefix from a subject, if present.
+     */
     private companion object {
         const val REPLY_PREFIX = "Re:"
         const val TICKET_PREFIX = "TICKET-"
