@@ -32,15 +32,9 @@
         >
           <div class="ticket-card-top">
             <div class="ticket-identifiers">
-              @if (item.type === 'ticket') {
-                <span class="ticket-number">
-                  {{ item.ticketNumber }}
-                </span>
-              } @else {
-                <span class="ticket-number">
-                  INTERNAL
-                </span>
-              }
+              <span class="ticket-number">
+                {{ item.ticketNumber }}
+              </span>
 
               @if (item.hasUnreadActivity) {
                 <span class="unread-chip">New activity</span>
