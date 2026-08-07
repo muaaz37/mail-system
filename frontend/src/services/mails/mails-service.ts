@@ -48,11 +48,16 @@ export class MailsService {
     return this.http.get<Mail>(`${API_BASE_URL}/mails/${id}`);
   }
 
+  /** Loads the complete internal conversation containing the selected mail. */
+  public getInternalConversation(id: string): Observable<Mail[]> {
+    return this.http.get<Mail[]>(`${API_BASE_URL}/mails/${id}/conversation`);
+  }
+
   /**
-   * Loads the server-generated reply template for an imported support mail.
+   * Loads the server-generated reply template for an internal or external mail.
    *
    * @param id Identifier of the mail that should be answered.
-   * @returns An observable containing prefilled external recipient and subject data.
+   * @returns An observable containing the locked delivery mode, recipients and subject.
    */
   public getReplyTemplate(id: string): Observable<MailReplyTemplate> {
     return this.http.get<MailReplyTemplate>(`${API_BASE_URL}/mails/${id}/reply-template`);

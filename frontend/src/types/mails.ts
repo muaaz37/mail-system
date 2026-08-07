@@ -37,6 +37,7 @@ export interface Mail {
   status: MailStatus;
   source: MailSource;
   deliveryMode: MailDeliveryMode;
+  isRead: boolean;
   to: User[];
   cc: User[];
   bcc: User[];
