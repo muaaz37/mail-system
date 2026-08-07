@@ -1,0 +1,222 @@
+.internal-inbox-page {
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+}
+
+.internal-inbox-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.6rem;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 1.6rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.84)),
+    radial-gradient(circle at top right, rgba(20, 184, 166, 0.16), transparent 24rem);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+}
+
+.internal-inbox-eyebrow {
+  margin: 0 0 0.35rem;
+  color: #0f766e;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.internal-inbox-hero h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(1.9rem, 3vw, 3rem);
+  font-weight: 880;
+  letter-spacing: -0.06em;
+}
+
+.internal-inbox-hero p:not(.internal-inbox-eyebrow) {
+  margin: 0.45rem 0 0;
+  color: #64748b;
+  font-weight: 620;
+}
+
+.internal-inbox-metric {
+  min-width: 8rem;
+  padding: 1rem;
+  border-radius: 1.2rem;
+  align-self: flex-start;
+  color: #fff;
+  background: linear-gradient(135deg, #0f172a, #0f766e);
+}
+
+.internal-inbox-metric strong,
+.internal-inbox-metric span {
+  display: block;
+}
+
+.internal-inbox-metric strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.internal-inbox-metric span {
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.internal-mail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.internal-mail-card {
+  padding: 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.88);
+  border-radius: 1.35rem;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.internal-mail-card-unread {
+  border-color: rgba(15, 118, 110, 0.42);
+  background:
+    linear-gradient(90deg, rgba(20, 184, 166, 0.08), transparent 22rem),
+    rgba(255, 255, 255, 0.94);
+}
+
+.internal-mail-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(20, 184, 166, 0.38);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.1);
+}
+
+.internal-mail-card:focus-visible {
+  outline: 3px solid rgba(20, 184, 166, 0.28);
+  outline-offset: 3px;
+}
+
+.internal-mail-card-top,
+.internal-mail-identifiers,
+.internal-mail-meta,
+.internal-mail-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.internal-mail-card-top,
+.internal-mail-footer {
+  justify-content: space-between;
+}
+
+.internal-label {
+  color: #0f766e;
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.unread-chip {
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  color: #115e59;
+  background: #ccfbf1;
+  font-size: 0.68rem;
+  font-weight: 880;
+}
+
+.internal-mail-date {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.internal-mail-card h3 {
+  margin: 0.65rem 0 0;
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 850;
+  letter-spacing: -0.035em;
+}
+
+.internal-mail-sender {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-weight: 650;
+}
+
+.internal-mail-sender span {
+  margin-right: 0.3rem;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.internal-mail-preview {
+  margin: 0.55rem 0 0;
+  color: #64748b;
+  line-height: 1.45;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.internal-mail-meta {
+  margin-top: 0.8rem;
+}
+
+.internal-mail-footer {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.82);
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.internal-inbox-loading,
+.internal-inbox-empty {
+  display: grid;
+  place-items: center;
+  min-height: 22rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.78);
+  border-radius: 1.4rem;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.78);
+  text-align: center;
+}
+
+.internal-inbox-empty div {
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 1rem;
+  border-radius: 1.3rem;
+  display: grid;
+  place-items: center;
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.1);
+  font-size: 1.7rem;
+}
+
+.internal-inbox-empty h3,
+.internal-inbox-empty p {
+  margin: 0;
+}
+
+@media (max-width: 680px) {
+  .internal-inbox-hero {
+    flex-direction: column;
+  }
+}

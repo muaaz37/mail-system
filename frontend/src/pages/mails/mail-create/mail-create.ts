@@ -23,7 +23,7 @@ export class MailCreate implements OnInit {
   protected isLoading = signal(false);
 
   /**
-   * Loads a reply template when the route represents a support-mail reply.
+   * Initializes the component and loads the reply template if an ID is provided.
    */
   ngOnInit(): void {
     if (this.id) {
@@ -37,11 +37,11 @@ export class MailCreate implements OnInit {
    * @returns User-facing page title.
    */
   protected title(): string {
-    return this.id ? 'Reply to support mail' : 'Create mail';
+    return this.id ? 'Reply to message' : 'Create mail';
   }
 
   /**
-   * Loads backend-generated reply metadata for the selected support mail.
+   * Loads the reply template for the specified mail.
    *
    * @param id Identifier of the mail being answered.
    */

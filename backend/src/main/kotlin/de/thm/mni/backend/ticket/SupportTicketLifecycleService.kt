@@ -3,10 +3,9 @@ package de.thm.mni.backend.ticket
 import de.thm.mni.backend.error.InvalidMailRequestException
 import de.thm.mni.backend.mail.Mail
 import de.thm.mni.backend.mail.MailRepository
-import de.thm.mni.backend.mail.SupportTicketService
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
-import de.thm.mni.backend.mail.toMessageIdList
+import de.thm.mni.backend.mail.external.toMessageIdList
 import de.thm.mni.backend.ticket.enums.SupportTicketStatus
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service

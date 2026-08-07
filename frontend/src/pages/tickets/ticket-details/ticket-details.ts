@@ -52,7 +52,7 @@ export class TicketDetails implements OnInit {
   }
 
   /**
-   * Opens the compose view for the latest external incoming mail in this ticket.
+   * Opens the compose view for the latest replyable mail in this ticket.
    */
   replyToSender(): void {
     const mailId = this.replyMailId();
@@ -238,7 +238,11 @@ export class TicketDetails implements OnInit {
   }
 
   /**
-   * Finds the latest external incoming mail that can be used as reply context.
+   * Finds the latest incoming mail that can be used as reply context.
+   *
+   * External support requests are replyable after import. Internal mails are
+   * replyable after application delivery. Authorization and recipient
+   * enforcement remain the responsibility of the backend reply service.
    *
    * @returns Mail identifier used for reply routing, or null when no reply target exists.
    */
@@ -246,7 +250,13 @@ export class TicketDetails implements OnInit {
     const mails = this.detail()?.mails ?? [];
     const incomingMail = [...mails]
       .reverse()
-      .find((mail) => mail.status === MailStatus.RECEIVED && mail.deliveryMode === MailDeliveryMode.EXTERNAL);
+      .find((mail) => {
+        if (mail.deliveryMode === MailDeliveryMode.EXTERNAL) {
+          return mail.status === MailStatus.RECEIVED;
+        }
+
+        return mail.status === MailStatus.SENT && mail.sender !== null;
+      });
 
     return incomingMail?.id ?? null;
   }

@@ -11,6 +11,7 @@ import java.util.UUID
 interface MailRepository: CrudRepository<Mail, UUID> {
     fun findAllBySender(sender: User): MutableList<Mail>
     fun findAllByStatus(status: MailStatus): MutableList<Mail>
+    fun findAllByInReplyToMail(inReplyToMail: Mail): List<Mail>
     fun findByExternalMessageId(externalMessageId: String): Mail?
     fun existsByExternalMessageId(externalMessageId: String): Boolean
     fun existsByTicketNumber(ticketNumber: String): Boolean

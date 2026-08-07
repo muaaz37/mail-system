@@ -1,11 +1,16 @@
-package de.thm.mni.backend.mail
+package de.thm.mni.backend.mail.external
 
 import de.thm.mni.backend.error.InvalidMailRequestException
 import de.thm.mni.backend.error.ResourceNotFoundException
+import de.thm.mni.backend.mail.Mail
+import de.thm.mni.backend.mail.MailRepository
+import de.thm.mni.backend.ticket.SupportTicketService
 import de.thm.mni.backend.mail.dto.MailPayload
-import de.thm.mni.backend.mail.dto.MailReplyTemplate
+import de.thm.mni.backend.mail.dto.ExternalMailReplyTemplate
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
+import de.thm.mni.backend.mail.toRecipientList
+import de.thm.mni.backend.mail.toRecipientString
 import de.thm.mni.backend.ticket.SupportTicketLifecycleService
 import jakarta.mail.internet.AddressException
 import jakarta.mail.internet.InternetAddress
@@ -26,17 +31,20 @@ class SupportReplyService(
      * Creates a reply template with ticket subject and the best external recipient address.
      */
     @Transactional
-    fun getReplyTemplate(originalMail: Mail): MailReplyTemplate {
+    fun getReplyTemplate(originalMail: Mail): ExternalMailReplyTemplate {
         ensureCanReplyToSupportMail(originalMail)
         val ticket = supportTicketLifecycleService.ensureTicketForMail(originalMail)
         val ticketNumber = ticket.ticketNumber
         val recipient = replyRecipientFor(originalMail)
 
-        return MailReplyTemplate(
-            replyToMailId = originalMail.id!!,
+        return ExternalMailReplyTemplate(
+            replyToMailId = requireNotNull(originalMail.id),
             ticketNumber = ticketNumber,
-            subject = supportTicketService.buildReplySubject(originalMail.subject, ticketNumber),
-            externalTo = listOf(recipient)
+            subject = supportTicketService.buildReplySubject(
+                originalMail.subject,
+                ticketNumber
+            ),
+            recipients = listOf(recipient)
         )
     }
 
@@ -44,16 +52,19 @@ class SupportReplyService(
      * Replaces client-supplied primary recipients with the original support sender.
      */
     @Transactional
-    fun enforceReplyRecipient(payload: MailPayload) {
-        val replyToMailId = payload.replyToMailId ?: return
+    fun enforceReplyRecipient(payload: MailPayload, originalMail: Mail)  {
         if (payload.deliveryMode != MailDeliveryMode.EXTERNAL) {
-            throw InvalidMailRequestException("Support replies must be external mails.")
+            throw InvalidMailRequestException(
+                "Support replies must be external mails."
+            )
         }
 
-        val originalMail = getMailById(replyToMailId)
         ensureCanReplyToSupportMail(originalMail)
+
         payload.externalTo.clear()
-        payload.externalTo.add(replyRecipientFor(originalMail))
+        payload.externalTo.add(
+            replyRecipientFor(originalMail)
+        )
     }
 
     /**
@@ -73,23 +84,36 @@ class SupportReplyService(
 
     /**
      * Copies the original support ticket context to a new outgoing reply.
+     *
+     * @param mail The outgoing reply mail.
+     * @param originalMail The original support mail.
      */
     @Transactional
-    fun applyReplyContext(mail: Mail, replyToMailId: UUID?) {
-        if (replyToMailId == null) {
-            return
-        }
+    fun applyReplyContext(mail: Mail, originalMail: Mail) {
         if (mail.deliveryMode != MailDeliveryMode.EXTERNAL) {
-            throw InvalidMailRequestException("Support replies must be external mails.")
+            throw InvalidMailRequestException(
+                "Support replies must use external delivery."
+            )
         }
 
-        val originalMail = getMailById(replyToMailId)
         ensureCanReplyToSupportMail(originalMail)
-        val ticket = supportTicketLifecycleService.attachReplyMail(mail, originalMail)
-        mail.externalTo = listOf(replyRecipientFor(originalMail)).toRecipientString()
+
+        mail.inReplyToMail = originalMail
+        val ticket = supportTicketLifecycleService.attachReplyMail(
+            mail,
+            originalMail
+        )
+
+        mail.externalTo = listOf(
+            replyRecipientFor(originalMail)
+        ).toRecipientString()
+
         mail.externalInReplyTo = originalMail.externalMessageId
         mail.externalReferences = referencesForReply(originalMail)
-        mail.subject = supportTicketService.prependTicketIfMissing(mail.subject, ticket.ticketNumber)
+        mail.subject = supportTicketService.prependTicketIfMissing(
+            mail.subject,
+            ticket.ticketNumber
+        )
     }
 
     /**

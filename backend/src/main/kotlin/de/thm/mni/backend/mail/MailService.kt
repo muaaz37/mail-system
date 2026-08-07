@@ -7,6 +7,7 @@ import de.thm.mni.backend.mail.dto.MailPayload
 import de.thm.mni.backend.mail.dto.MailUpdate
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
+import de.thm.mni.backend.mail.external.SupportReplyService
 import de.thm.mni.backend.mailrecord.MailRecordService
 import de.thm.mni.backend.smtp.SMTPService
 import de.thm.mni.backend.ticket.SupportTicketLifecycleService
@@ -27,7 +28,8 @@ class MailService(
     private val mailRecipientValidator: MailRecipientValidator,
     private val mailAttachmentHandler: MailAttachmentHandler,
     private val supportReplyService: SupportReplyService,
-    private val supportTicketLifecycleService: SupportTicketLifecycleService
+    private val supportTicketLifecycleService: SupportTicketLifecycleService,
+    private val mailReplyService: MailReplyService
 ) {
     /**
      * Loads one mail by its identifier without applying authorization rules.
@@ -104,7 +106,7 @@ class MailService(
      */
     @Transactional
     fun createMail(mail: MailCreate, sender: User, attachments: List<MultipartFile>): Mail {
-        supportReplyService.enforceReplyRecipient(mail)
+        mailReplyService.enforceReplyContext(mail, sender)
         validateMail(mail, sender)
         val mailEntity = Mail(
             sender = sender,
@@ -113,7 +115,10 @@ class MailService(
             attachments = mutableListOf()
         ).applyExternalFields(mail)
 
-        supportReplyService.applyReplyContext(mailEntity, mail.replyToMailId)
+        mailReplyService.applyReplyContext(
+            replyMail = mailEntity,
+            replyToMailId = mail.replyToMailId
+        )
         mailAttachmentHandler.addUploadedAttachments(mailEntity, attachments)
         val createdMail = mailRepository.save(mailEntity)
         createInternalRecords(createdMail, mail)
@@ -135,13 +140,25 @@ class MailService(
     @Transactional
     fun updateMail(id: UUID, mail: MailUpdate, attachments: List<MultipartFile>): Mail {
         val existingMail = getMailById(id)!!
-        supportReplyService.enforceReplyRecipient(mail)
+        val sender = requireNotNull(existingMail.sender)
+        val storedOriginalMail = existingMail.inReplyToMail
+
+        mailReplyService.enforceReplyContext(
+            payload = mail,
+            currentUser = sender,
+            storedOriginalMail = storedOriginalMail
+        )
         supportReplyService.enforceStoredReplyRecipient(existingMail, mail)
-        validateMail(mail, existingMail.sender!!)
+        validateMail(mail, sender)
         existingMail.subject = mail.subject
         existingMail.content = mail.content
         existingMail.applyExternalFields(mail)
-        supportReplyService.applyReplyContext(existingMail, mail.replyToMailId)
+
+        val originalMailId = mail.replyToMailId ?: storedOriginalMail?.id
+        mailReplyService.applyReplyContext(
+            replyMail = existingMail,
+            replyToMailId = originalMailId
+        )
         supportReplyService.enforceTicketSubject(existingMail)
         mailAttachmentHandler.replaceAttachments(existingMail, attachments)
 

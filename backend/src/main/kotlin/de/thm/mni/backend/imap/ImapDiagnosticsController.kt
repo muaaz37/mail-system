@@ -2,7 +2,7 @@ package de.thm.mni.backend.imap
 
 import de.thm.mni.backend.imap.dto.ImapMailPreview
 import de.thm.mni.backend.mail.MailAccessService
-import de.thm.mni.backend.mail.MailImportService
+import de.thm.mni.backend.mail.external.MailImportService
 import de.thm.mni.backend.mail.MailMapper
 import de.thm.mni.backend.mail.dto.MailDTO
 import de.thm.mni.backend.openapi.BearerAuthenticated

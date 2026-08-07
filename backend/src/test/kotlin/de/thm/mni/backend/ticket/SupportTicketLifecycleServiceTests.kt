@@ -2,7 +2,6 @@ package de.thm.mni.backend.ticket
 
 import de.thm.mni.backend.mail.Mail
 import de.thm.mni.backend.mail.MailRepository
-import de.thm.mni.backend.mail.SupportTicketService
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
 import org.junit.jupiter.api.BeforeEach

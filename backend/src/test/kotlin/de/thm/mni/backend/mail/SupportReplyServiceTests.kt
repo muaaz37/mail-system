@@ -2,7 +2,9 @@ package de.thm.mni.backend.mail
 
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
+import de.thm.mni.backend.mail.external.SupportReplyService
 import de.thm.mni.backend.ticket.SupportTicketLifecycleService
+import de.thm.mni.backend.ticket.SupportTicketService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import kotlin.test.assertEquals

@@ -10,6 +10,7 @@ import de.thm.mni.backend.user.UserService
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
 import java.util.UUID
+import java.time.LocalDateTime
 
 /**
  * Manages recipient records for internal mails.
@@ -55,6 +56,20 @@ class MailRecordService(
             .filter { record -> record.type !== MailType.REPLY_TO }
             .map { record -> record.mail!! }
             .filter { mail -> mail.status == MailStatus.SENT }
+    }
+
+    /**
+     * Marks the recipient's visible record for an internal mail as read.
+     */
+    @Transactional
+    fun markMailRead(mailId: UUID, userId: UUID) {
+        repository.findMailRecordByMailId(mailId)
+            .filter { record -> record.user?.id == userId && record.type != MailType.REPLY_TO }
+            .filter { record -> record.readAt == null }
+            .forEach { record ->
+                record.readAt = LocalDateTime.now()
+                repository.save(record)
+            }
     }
 
     /**

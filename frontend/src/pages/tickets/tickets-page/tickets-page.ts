@@ -5,11 +5,7 @@ import { MessageService } from 'primeng/api';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
 import { Toast } from 'primeng/toast';
-import { forkJoin, of } from 'rxjs';
-
-import { MailsService } from '../../../services/mails/mails-service';
 import { TicketsService } from '../../../services/tickets/tickets-service';
-import { Mail, MailDeliveryMode } from '../../../types/mails';
 import {
   SupportTicket,
   SupportTicketPriority,
@@ -21,7 +17,7 @@ import { readApiErrorMessage } from '../../../utils/api-error-message';
 
 interface TicketListItem {
   id: string;
-  type: 'ticket' | 'internal-mail';
+  type: 'ticket';
   subject: string;
   requesterName: string;
   lastActivityAt: string;
@@ -43,14 +39,13 @@ export class TicketsPage implements OnInit {
   protected view: TicketView = 'open';
   protected title = 'Open tickets';
   protected description =
-    'External support tickets and internal messages that need attention.';
+    'External support tickets that need attention.';
   protected metricLabel = 'open items';
 
   protected items = signal<TicketListItem[]>([]);
   protected isLoading = signal(true);
 
   private ticketsService = inject(TicketsService);
-  private mailsService = inject(MailsService);
   private messageService = inject(MessageService);
   private router = inject(Router);
 
@@ -63,17 +58,12 @@ export class TicketsPage implements OnInit {
   }
 
   /**
-   * Opens the detail view for a selected ticket or internal message.
+   * Opens the detail view for a selected support ticket.
    *
    * @param item Queue item selected from the overview.
    */
   protected openItem(item: TicketListItem): void {
-    if (item.type === 'ticket') {
-      this.router.navigate(['/mails/tickets', item.id]);
-      return;
-    }
-
-    this.router.navigate(['/mails', item.id]);
+    this.router.navigate(['/mails/tickets', item.id]);
   }
 
   /**
@@ -210,43 +200,20 @@ export class TicketsPage implements OnInit {
   }
 
   /**
-   * Loads support tickets and internal messages for the configured queue view.
+   * Loads external support tickets for the configured queue view.
    */
   private loadItems(): void {
     this.isLoading.set(true);
 
-    // Internal team messages are regular mails, not customer tickets.
-    const internalMailsRequest =
-      this.view === 'open'
-        ? this.mailsService.getIncomingMails()
-        : of([] as Mail[]);
-
-    forkJoin({
-      tickets: this.ticketsService.getTickets(this.view),
-      mails: internalMailsRequest,
-    }).subscribe({
-      next: ({ tickets, mails }) => {
-        const ticketItems = tickets.map((ticket) =>
-          this.mapTicket(ticket),
-        );
-
-        const internalMailItems = mails
-          .filter(
-            (mail) =>
-              mail.deliveryMode === MailDeliveryMode.INTERNAL,
-          )
-          .map((mail) => this.mapInternalMail(mail));
-
-        const combinedItems = [
-          ...ticketItems,
-          ...internalMailItems,
-        ].sort(
+    this.ticketsService.getTickets(this.view).subscribe({
+      next: (tickets) => {
+        const ticketItems = tickets.map((ticket) => this.mapTicket(ticket)).sort(
           (first, second) =>
             new Date(second.lastActivityAt).getTime() -
             new Date(first.lastActivityAt).getTime(),
         );
 
-        this.items.set(combinedItems);
+        this.items.set(ticketItems);
         this.isLoading.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -286,31 +253,4 @@ export class TicketsPage implements OnInit {
     };
   }
 
-  /**
-   * Converts an internal mail into the common queue item representation.
-   *
-   * @param mail Internal mail returned by the backend.
-   * @returns Queue item displayed by the open overview.
-   */
-  private mapInternalMail(mail: Mail): TicketListItem {
-    const fullName = mail.sender
-      ? `${mail.sender.firstName} ${mail.sender.lastName}`.trim()
-      : '';
-
-    return {
-      id: mail.id,
-      type: 'internal-mail',
-      subject: mail.subject,
-      requesterName:
-        fullName ||
-        mail.sender?.email ||
-        'Unknown sender',
-      mailCount: 1,
-      hasUnreadActivity: false,
-      lastActivityAt:
-        mail.sentAt ||
-        mail.updatedAt ||
-        mail.createdAt,
-    };
-  }
 }

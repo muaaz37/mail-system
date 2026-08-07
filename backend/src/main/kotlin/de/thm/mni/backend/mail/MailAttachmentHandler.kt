@@ -31,7 +31,10 @@ class MailAttachmentHandler(private val fileStorageService: FileStorageService) 
      */
     fun replaceAttachments(mail: Mail, attachments: List<MultipartFile>) {
         deleteAttachments(mail)
-        mail.attachments.clear()
+        mail.attachments
+            .toList()
+            .forEach (mail::removeAttachment)
+
         addUploadedAttachments(mail, attachments)
     }
 

@@ -21,6 +21,7 @@ export enum MailDeliveryMode {
 
 export interface Mail {
   id: string;
+  replyToMailId?: string | null;
   sender: User | null;
   externalSenderEmail?: string | null;
   externalSenderName?: string | null;
@@ -36,6 +37,7 @@ export interface Mail {
   status: MailStatus;
   source: MailSource;
   deliveryMode: MailDeliveryMode;
+  isRead: boolean;
   to: User[];
   cc: User[];
   bcc: User[];
@@ -80,12 +82,34 @@ export interface UpdateMail {
   replyToMailId?: string | null;
 }
 
-export interface MailReplyTemplate {
+/**
+ * Fields shared by every backend-generated reply template.
+ */
+interface BaseMailReplyTemplate {
   replyToMailId: string;
-  ticketNumber: string;
   subject: string;
-  externalTo: string[];
-  externalCc: string[];
-  externalBcc: string[];
-  externalReplyTo: string[];
 }
+
+/**
+ * Prefilled data for replying inside the application.
+ */
+export interface InternalMailReplyTemplate extends BaseMailReplyTemplate {
+  deliveryMode: MailDeliveryMode.INTERNAL;
+  recipientIds: string[];
+}
+
+/**
+ * Prefilled data for replying to an external support mail.
+ */
+export interface ExternalMailReplyTemplate extends BaseMailReplyTemplate {
+  deliveryMode: MailDeliveryMode.EXTERNAL;
+  ticketNumber: string;
+  recipients: string[];
+}
+
+/**
+ * Reply template returned by the backend.
+ *
+ * The delivery mode identifies the concrete template variant.
+ */
+export type MailReplyTemplate = InternalMailReplyTemplate | ExternalMailReplyTemplate;

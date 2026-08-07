@@ -3,6 +3,7 @@ import { LoginPage } from '../pages/login-page/login-page';
 import { RootLayout } from '../layouts/root-layout/root-layout';
 import { AuthGuard } from '../services/auth/auth-guard';
 import { MailSent } from '../pages/mails/mail-sent/mail-sent';
+import { MailInbox } from '../pages/mails/mail-inbox/mail-inbox';
 import { MailDrafts } from '../pages/mails/mail-drafts/mail-drafts';
 import { MailDetails } from '../pages/mails/mail-details/mail-details';
 import { MailCreate } from '../pages/mails/mail-create/mail-create';
@@ -52,6 +53,7 @@ export const routes: Routes = [
     canActivate: [AuthGuard],
     children: [
       { path: '', component: TicketsPage },
+      { path: 'inbox', component: MailInbox },
       { path: 'waiting', component: TicketsPage },
       { path: 'resolved', component: TicketsPage },
       { matcher: prefixWithUuidRoute('tickets', 'id'), component: TicketDetails },

@@ -15,6 +15,7 @@ import java.util.UUID
  */
 data class MailDTO(
     val id: UUID?,
+    val replyToMailId: UUID?,
     val sender: UserDTO?,
     val externalSenderEmail: String?,
     val externalSenderName: String?,
@@ -30,6 +31,7 @@ data class MailDTO(
     val status: MailStatus,
     val source: MailSource,
     val deliveryMode: MailDeliveryMode,
+    val isRead: Boolean,
     val to: List<UserDTO>,
     val cc: List<UserDTO>,
     val bcc: List<UserDTO>,

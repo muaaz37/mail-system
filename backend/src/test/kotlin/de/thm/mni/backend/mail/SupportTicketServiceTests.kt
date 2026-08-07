@@ -1,5 +1,6 @@
 package de.thm.mni.backend.mail
 
+import de.thm.mni.backend.ticket.SupportTicketService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import kotlin.test.assertEquals

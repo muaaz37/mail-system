@@ -51,6 +51,9 @@ export class MailDetails implements OnInit {
 
   protected mail = signal<Mail | null>(null);
   protected isLoading = signal(true);
+  protected conversation = signal<Mail[]>([]);
+  protected isConversationLoading = signal(false);
+  protected isConversationVisible = signal(false);
 
   /**
    * Loads the selected mail when the route parameter has been bound.
@@ -79,15 +82,27 @@ export class MailDetails implements OnInit {
   }
 
   /**
-   * Checks whether a support reply can be created from the displayed mail.
+   * Checks whether the displayed mail can be answered by the current user.
    *
-   * @returns True for unresolved external received support mails.
+   * Internal inbox mails can be answered after delivery. External support mails
+   * can be answered while their associated ticket remains unresolved.
+   *
+   * @returns True when the reply action should be available.
    */
-  canReplyToSupportMail(): boolean {
+  canReply(): boolean {
     const mail = this.mail();
-    return mail?.status === MailStatus.RECEIVED &&
-      mail.deliveryMode === MailDeliveryMode.EXTERNAL &&
-      mail.ticketStatus !== SupportTicketStatus.RESOLVED;
+
+    if (!mail || this.isUserSender()) {
+      return false;
+    }
+
+    if (mail.deliveryMode === MailDeliveryMode.INTERNAL) {
+      return mail.status === MailStatus.SENT && mail.sender !== null;
+    }
+
+    return (
+      mail.status === MailStatus.RECEIVED && mail.ticketStatus !== SupportTicketStatus.RESOLVED
+    );
   }
 
   /**
@@ -97,8 +112,40 @@ export class MailDetails implements OnInit {
    */
   canViewTicket(): boolean {
     const mail = this.mail();
-    return !!mail?.ticketId &&
-      !(mail.deliveryMode === MailDeliveryMode.INTERNAL && this.isUserSender());
+    return mail?.deliveryMode === MailDeliveryMode.EXTERNAL && !!mail.ticketId;
+  }
+
+  /** Returns whether the internal conversation action is available. */
+  canViewConversation(): boolean {
+    const mail = this.mail();
+    return mail?.deliveryMode === MailDeliveryMode.INTERNAL && mail.status === MailStatus.SENT;
+  }
+
+  /** Loads the internal conversation once and toggles its visibility. */
+  toggleConversation(): void {
+    const mail = this.mail();
+    if (!mail || !this.canViewConversation()) return;
+
+    if (this.isConversationVisible()) {
+      this.isConversationVisible.set(false);
+      return;
+    }
+
+    this.isConversationVisible.set(true);
+    if (this.conversation().length || this.isConversationLoading()) return;
+
+    this.isConversationLoading.set(true);
+    this.mailsService.getInternalConversation(mail.id).subscribe({
+      next: (conversation) => {
+        this.conversation.set(conversation);
+        this.isConversationLoading.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.isConversationVisible.set(false);
+        this.isConversationLoading.set(false);
+        this.showError('Failed to Load Conversation', err);
+      },
+    });
   }
 
   /**
@@ -108,6 +155,8 @@ export class MailDetails implements OnInit {
    */
   private loadMail(id: string): void {
     this.isLoading.set(true);
+    this.conversation.set([]);
+    this.isConversationVisible.set(false);
     this.mailsService.getMailById(id).subscribe({
       next: (mail) => {
         mail.attachments.forEach((attachment) => this.loadAttachmentPreview(attachment));
@@ -141,13 +190,16 @@ export class MailDetails implements OnInit {
   }
 
   /**
-   * Opens the compose page with a backend-generated support reply template.
+   * Opens the compose page with reply metadata for the displayed mail.
    */
-  replyToSupportMail(): void {
+  replyToMail(): void {
     const mail = this.mail();
-    if (mail) {
-      this.router.navigate(['/mails', mail.id, 'reply']);
+
+    if (!mail || !this.canReply()) {
+      return;
     }
+
+    this.router.navigate(['/mails', mail.id, 'reply']);
   }
 
   /**
@@ -241,7 +293,10 @@ export class MailDetails implements OnInit {
    * @returns True when MIME type or filename indicates a PDF.
    */
   isPdfAttachment(attachment: Attachment): boolean {
-    return attachment.mimeType === 'application/pdf' || attachment.fileName?.toLowerCase().endsWith('.pdf');
+    return (
+      attachment.mimeType === 'application/pdf' ||
+      attachment.fileName?.toLowerCase().endsWith('.pdf')
+    );
   }
 
   /**

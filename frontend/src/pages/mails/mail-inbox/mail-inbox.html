@@ -1,7 +1,78 @@
 <p-toast />
-<app-mails-list
-  [mails]="mails()"
-  [isLoading]="isLoading()"
-  [title]="'Inbox'"
-  [mailbox]="'inbox'"
-></app-mails-list>
+
+<div class="internal-inbox-page">
+  <section class="internal-inbox-hero">
+    <div>
+      <p class="internal-inbox-eyebrow">Personal mailbox</p>
+      <h2>Internal Inbox</h2>
+      <p>Internal messages sent directly to your account.</p>
+    </div>
+
+    <div class="internal-inbox-metric">
+      <strong>{{ isLoading() ? '-' : mails().length }}</strong>
+      <span>internal messages</span>
+    </div>
+  </section>
+
+  @if (isLoading()) {
+    <div class="internal-inbox-loading">
+      <p-progress-spinner strokeWidth="4" />
+    </div>
+  } @else if (mails().length) {
+    <div class="internal-mail-grid">
+      @for (mail of mails(); track mail.id) {
+        <article
+          class="internal-mail-card"
+          [class.internal-mail-card-unread]="!mail.isRead"
+          role="button"
+          tabindex="0"
+          (click)="openMail(mail)"
+          (keydown.enter)="openMail(mail)"
+          (keydown.space)="$event.preventDefault(); openMail(mail)"
+        >
+          <div class="internal-mail-card-top">
+            <div class="internal-mail-identifiers">
+              <span class="internal-label">INTERNAL</span>
+              @if (!mail.isRead) {
+                <span class="unread-chip">New message</span>
+              }
+            </div>
+            <span class="internal-mail-date">
+              {{ formatDate(mail.sentAt || mail.createdAt) }}
+            </span>
+          </div>
+
+          <h3>{{ mail.subject }}</h3>
+
+          <p class="internal-mail-sender">
+            <span>From</span>
+            {{ getMailSenderDisplay(mail).name }}
+          </p>
+
+          <p class="internal-mail-preview">{{ preview(mail) }}</p>
+
+          <div class="internal-mail-meta">
+            <p-tag value="Internal message" severity="info" />
+            @if (mail.attachments.length) {
+              <p-tag
+                [value]="mail.attachments.length + (mail.attachments.length === 1 ? ' file' : ' files')"
+                severity="secondary"
+              />
+            }
+          </div>
+
+          <div class="internal-mail-footer">
+            <span><i class="pi pi-envelope"></i> Internal message</span>
+            <span><i class="pi pi-comments"></i> View conversation</span>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="internal-inbox-empty">
+      <div><i class="pi pi-inbox"></i></div>
+      <h3>No internal messages</h3>
+      <p>Messages sent directly to your account will appear here.</p>
+    </div>
+  }
+</div>
