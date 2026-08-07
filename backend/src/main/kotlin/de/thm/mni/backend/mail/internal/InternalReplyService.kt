@@ -1,6 +1,8 @@
-package de.thm.mni.backend.mail
+package de.thm.mni.backend.mail.internal
 
 import de.thm.mni.backend.error.InvalidMailRequestException
+import de.thm.mni.backend.mail.Mail
+import de.thm.mni.backend.mail.buildReplySubject
 import de.thm.mni.backend.mail.dto.InternalMailReplyTemplate
 import de.thm.mni.backend.mail.dto.MailPayload
 import de.thm.mni.backend.mail.enums.MailDeliveryMode

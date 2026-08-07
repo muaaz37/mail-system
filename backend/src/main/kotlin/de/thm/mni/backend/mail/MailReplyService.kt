@@ -4,6 +4,8 @@ import de.thm.mni.backend.error.ResourceNotFoundException
 import de.thm.mni.backend.mail.dto.MailPayload
 import de.thm.mni.backend.mail.dto.MailReplyTemplate
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
+import de.thm.mni.backend.mail.external.SupportReplyService
+import de.thm.mni.backend.mail.internal.InternalReplyService
 import de.thm.mni.backend.user.User
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
