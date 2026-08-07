@@ -406,7 +406,7 @@ export class MailForm implements OnInit, OnChanges {
    *
    * @returns Full subject including the support ticket number for replies.
    */
-  private completeSubject(): string {
+  protected completeSubject(): string {
     const subject = this.mailForm.controls.subject.value?.trim() ?? '';
     const ticketNumber = this.replyTicketNumber();
     return ticketNumber ? `[${ticketNumber}] ${this.editableReplySubject(subject)}`.trim() : subject;

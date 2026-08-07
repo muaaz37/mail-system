@@ -21,4 +21,21 @@ class SupportTicketServiceTests {
 
         assertEquals("[TICKET-123456] Re: Support request", subject)
     }
+
+    @Test
+    fun `reply subject keeps original subject and prepends ticket number`() {
+        val subject = supportTicketService.buildReplySubject("Cannot open portal", "TICKET-123456")
+
+        assertEquals("[TICKET-123456] Re: Cannot open portal", subject)
+    }
+
+    @Test
+    fun `reply subject does not duplicate an existing ticket number`() {
+        val subject = supportTicketService.prependTicketIfMissing(
+            "[TICKET-123456] Re: Cannot open portal",
+            "TICKET-123456"
+        )
+
+        assertEquals("[TICKET-123456] Re: Cannot open portal", subject)
+    }
 }

@@ -142,6 +142,7 @@ class MailService(
         existingMail.content = mail.content
         existingMail.applyExternalFields(mail)
         supportReplyService.applyReplyContext(existingMail, mail.replyToMailId)
+        supportReplyService.enforceTicketSubject(existingMail)
         mailAttachmentHandler.replaceAttachments(existingMail, attachments)
 
         val updatedMail = mailRepository.save(existingMail)

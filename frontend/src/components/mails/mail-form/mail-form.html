@@ -7,9 +7,9 @@
           Use internal recipients for application-only messages. Use external recipients for support
           mails sent through the configured THM mailbox.
         </p>
-        @if (replyTemplate) {
+        @if (isSupportReply() && replyTicketNumber()) {
           <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <span class="font-semibold">Support ticket {{ replyTemplate.ticketNumber }}</span>
+            <span class="font-semibold">Support ticket {{ replyTicketNumber() }}</span>
             <span> will be included in the subject. The primary recipient is locked to the original sender.</span>
           </div>
         }
@@ -70,6 +70,12 @@
             @if (mailForm.get('subject')?.invalid && mailForm.get('subject')?.touched) {
               <small class="mt-1 text-sm text-red-600">
                 Subject is required and must be between 1 and 120 characters
+              </small>
+            }
+            @if (isSupportReply()) {
+              <small class="text-xs text-slate-500">
+                Sent subject:
+                <span class="font-semibold text-slate-700">{{ completeSubject() }}</span>
               </small>
             }
           </div>
