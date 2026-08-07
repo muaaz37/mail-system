@@ -21,6 +21,13 @@ export class SideNavigation {
       exact: true,
     },
     {
+      label: 'Internal Inbox',
+      description: 'Team messages',
+      icon: 'pi pi-envelope',
+      route: '/mails/inbox',
+      exact: true,
+    },
+    {
       label: 'Waiting',
       description: 'External reply pending',
       icon: 'pi pi-clock',
