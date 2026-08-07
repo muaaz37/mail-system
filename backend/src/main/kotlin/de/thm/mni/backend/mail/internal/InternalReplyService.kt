@@ -110,26 +110,20 @@ class InternalReplyService(
      * Verifies that the original mail is a sent internal mail that can be replied to.
      */
     private fun ensureOriginalMailReplyable(originalMail: Mail) {
-        // Check if the original mail is an internal mail
-        if (originalMail.deliveryMode != MailDeliveryMode.INTERNAL) {
-            throw InvalidMailRequestException(
+        val errorMessage = when {
+            originalMail.deliveryMode != MailDeliveryMode.INTERNAL -> {
                 "The selected mail is not an internal mail."
-            )
-        }
-
-        // Check if the original mail is sent
-        if (originalMail.status != MailStatus.SENT) {
-            throw InvalidMailRequestException(
+            }
+            originalMail.status != MailStatus.SENT -> {
                 "Only sent internal mails can be answered."
-            )
+            }
+            originalMail.sender?.id == null -> {
+                "Internal mail has no valid sender."
+            }
+            else -> null
         }
 
-        // Check if the original mail has a sender
-        if (originalMail.sender?.id == null) {
-            throw InvalidMailRequestException(
-                "Internal mail has no valid sender."
-            )
-        }
+        if (errorMessage != null) throw InvalidMailRequestException(errorMessage)
     }
 
     /**
@@ -141,13 +135,12 @@ class InternalReplyService(
     ) {
         ensureOriginalMailReplyable(originalMail)
 
-        // Check if the current user is allowed to reply to the original mail
         if (originalMail.sender?.id == currentUser.id) {
             throw InvalidMailRequestException(
                 "Users cannot reply to their own internal mail."
             )
         }
-        // Check if the current user is a recipient of the original mail
+
         val isRecipient = mailRecordService
             .getMailRecordByMailId(requireNotNull(originalMail.id))
             .any { record ->

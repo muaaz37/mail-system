@@ -32,11 +32,11 @@ class InternalMailConversationService(
 
         while (pending.isNotEmpty()) {
             val current = pending.removeFirst()
-            val currentId = current.id ?: continue
-            if (!visited.add(currentId)) continue
-
-            conversation.add(current)
-            mailRepository.findAllByInReplyToMail(current).forEach(pending::addLast)
+            val currentId = current.id
+            if (currentId != null && visited.add(currentId)) {
+                conversation.add(current)
+                mailRepository.findAllByInReplyToMail(current).forEach(pending::addLast)
+            }
         }
 
         return conversation.sortedBy { item -> item.sentAt ?: item.createdAt }
@@ -49,12 +49,15 @@ class InternalMailConversationService(
         var current = mail
         val visited = mutableSetOf<UUID>()
 
-        while (current.inReplyToMail != null) {
-            val currentId = current.id ?: break
-            if (!visited.add(currentId)) break
+        while (current.inReplyToMail != null && isUnvisited(current, visited)) {
             current = current.inReplyToMail!!
         }
 
         return current
+    }
+
+    private fun isUnvisited(mail: Mail, visited: MutableSet<UUID>): Boolean {
+        val mailId = mail.id ?: return false
+        return visited.add(mailId)
     }
 }
