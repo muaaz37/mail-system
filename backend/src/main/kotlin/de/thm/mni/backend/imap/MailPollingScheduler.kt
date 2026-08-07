@@ -1,7 +1,7 @@
 package de.thm.mni.backend.imap
 
 import de.thm.mni.backend.config.MailPollingProperties
-import de.thm.mni.backend.mail.MailImportService
+import de.thm.mni.backend.mail.external.MailImportService
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
