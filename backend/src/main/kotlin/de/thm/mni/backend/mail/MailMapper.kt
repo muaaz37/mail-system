@@ -21,6 +21,9 @@ class MailMapper(private val mailRecordService: MailRecordService) {
     fun toDTO(user: User, mail: Mail): MailDTO {
         val records = mailRecordService.getMailRecordByMailId(mail.id!!)
         val isCurrentUserSender = mail.sender?.id == user.id
+        val currentUserRecipientRecords = records.filter { record ->
+            record.user?.id == user.id && record.type != MailType.REPLY_TO
+        }
 
         return MailDTO(
             id = mail.id,
@@ -40,6 +43,9 @@ class MailMapper(private val mailRecordService: MailRecordService) {
             status = mail.status,
             source = if (mail.sender == null) MailSource.EXTERN else MailSource.INTERN,
             deliveryMode = mail.deliveryMode,
+            isRead = isCurrentUserSender ||
+                currentUserRecipientRecords.isEmpty() ||
+                currentUserRecipientRecords.all { record -> record.readAt != null },
             to = records.filter { record -> record.type == MailType.TO }.map { record -> record.user!!.toDTO() },
             cc = records.filter { record -> record.type == MailType.CC }.map { record -> record.user!!.toDTO() },
             bcc = records

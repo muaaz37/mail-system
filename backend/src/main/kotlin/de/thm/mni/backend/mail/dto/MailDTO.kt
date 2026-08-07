@@ -31,6 +31,7 @@ data class MailDTO(
     val status: MailStatus,
     val source: MailSource,
     val deliveryMode: MailDeliveryMode,
+    val isRead: Boolean,
     val to: List<UserDTO>,
     val cc: List<UserDTO>,
     val bcc: List<UserDTO>,
