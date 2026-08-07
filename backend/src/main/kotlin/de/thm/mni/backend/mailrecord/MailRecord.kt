@@ -11,6 +11,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import java.time.LocalDateTime
 
 /**
  * Links one mail to one internal recipient and stores the recipient role.
@@ -32,6 +33,10 @@ class MailRecord {
     @Column(name = "type")
     @Enumerated(EnumType.STRING)
     var type: MailType? = null
+
+    /** Timestamp at which this recipient opened the internal message. */
+    @Column(name = "read_at")
+    var readAt: LocalDateTime? = null
 
     constructor()
 
