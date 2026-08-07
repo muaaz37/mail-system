@@ -1,12 +1,16 @@
-package de.thm.mni.backend.mail
+package de.thm.mni.backend.mail.external
 
 import de.thm.mni.backend.error.InvalidMailRequestException
 import de.thm.mni.backend.error.ResourceNotFoundException
+import de.thm.mni.backend.mail.Mail
+import de.thm.mni.backend.mail.MailRepository
+import de.thm.mni.backend.ticket.SupportTicketService
 import de.thm.mni.backend.mail.dto.MailPayload
-import de.thm.mni.backend.mail.dto.MailReplyTemplate
 import de.thm.mni.backend.mail.dto.ExternalMailReplyTemplate
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
+import de.thm.mni.backend.mail.toRecipientList
+import de.thm.mni.backend.mail.toRecipientString
 import de.thm.mni.backend.ticket.SupportTicketLifecycleService
 import jakarta.mail.internet.AddressException
 import jakarta.mail.internet.InternetAddress

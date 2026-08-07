@@ -7,6 +7,7 @@ import de.thm.mni.backend.mail.dto.MailPayload
 import de.thm.mni.backend.mail.dto.MailUpdate
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
+import de.thm.mni.backend.mail.external.SupportReplyService
 import de.thm.mni.backend.mailrecord.MailRecordService
 import de.thm.mni.backend.smtp.SMTPService
 import de.thm.mni.backend.ticket.SupportTicketLifecycleService
