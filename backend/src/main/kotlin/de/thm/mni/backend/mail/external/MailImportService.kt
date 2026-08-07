@@ -1,12 +1,15 @@
-package de.thm.mni.backend.mail
+package de.thm.mni.backend.mail.external
 
 import de.thm.mni.backend.attachment.Attachment
 import de.thm.mni.backend.attachment.dto.AttachmentDTO
 import de.thm.mni.backend.config.SupportMailProperties
 import de.thm.mni.backend.imap.IMAPService
 import de.thm.mni.backend.imap.dto.ImapMailData
+import de.thm.mni.backend.mail.Mail
+import de.thm.mni.backend.mail.MailRepository
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
+import de.thm.mni.backend.mail.toRecipientString
 import de.thm.mni.backend.storage.FileStorageService
 import de.thm.mni.backend.ticket.SupportTicketLifecycleService
 import jakarta.mail.internet.InternetAddress
@@ -111,6 +114,9 @@ class MailImportService(
         }
     }
 
+    /**
+     * Normalizes a Message-ID by trimming whitespace and returning null for empty values.
+     */
     private fun normalizeMessageId(messageId: String?): String? {
         return messageId?.trim()?.takeIf { id -> id.isNotEmpty() }
     }
@@ -129,6 +135,9 @@ class MailImportService(
         }
     }
 
+    /**
+     * Holds the result of an import operation, including the imported mail and whether to mark it as seen.
+     */
     private data class ImportResult(
         val mail: Mail?,
         val markAsSeen: Boolean
