@@ -1,8 +1,6 @@
 package de.thm.mni.backend.ticket
 
-import de.thm.mni.backend.mail.Mail
 import de.thm.mni.backend.mail.MailRepository
-import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
 import java.security.SecureRandom
 
@@ -18,24 +16,6 @@ class SupportTicketService(private val mailRepository: MailRepository) {
      */
     fun extractTicketNumber(subject: String): String? {
         return TICKET_PATTERN.find(subject)?.groupValues?.get(1)?.uppercase()
-    }
-
-    /**
-     * Reuses an existing ticket number or generates one for a new support case.
-     */
-    @Transactional
-    fun ensureTicketNumber(mail: Mail): String {
-        val existingTicket = mail.ticketNumber ?: extractTicketNumber(mail.subject)
-        if (existingTicket != null) {
-            mail.ticketNumber = existingTicket
-            mailRepository.save(mail)
-            return existingTicket
-        }
-
-        val generatedTicket = generateUniqueTicketNumber()
-        mail.ticketNumber = generatedTicket
-        mailRepository.save(mail)
-        return generatedTicket
     }
 
     /**
@@ -80,7 +60,7 @@ class SupportTicketService(private val mailRepository: MailRepository) {
      * Removes a ticket number prefix from a subject, if present.
      */
     fun removeTicketPrefix(subject: String): String {
-        return subject.replace(Regex("^\\s*\\[$TICKET_PREFIX\\d{$TICKET_DIGITS}\\]\\s*", RegexOption.IGNORE_CASE), "")
+        return subject.replace(Regex("^\\s*\\[$TICKET_PREFIX\\d{$TICKET_DIGITS}]\\s*", RegexOption.IGNORE_CASE), "")
             .trim()
     }
 

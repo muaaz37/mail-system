@@ -2,7 +2,6 @@ package de.thm.mni.backend.mail
 
 import de.thm.mni.backend.attachment.dto.toDTO
 import de.thm.mni.backend.mail.dto.MailDTO
-import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailSource
 import de.thm.mni.backend.mail.enums.MailType
 import de.thm.mni.backend.mailrecord.MailRecordService
