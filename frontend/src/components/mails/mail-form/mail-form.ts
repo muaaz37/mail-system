@@ -80,7 +80,8 @@ export class MailForm implements OnInit, OnChanges {
   protected uploadedFiles = signal<File[]>([]);
   protected isLoading = signal(false);
   protected attachments = signal<Attachment[]>([]);
-  protected readonly acceptedAttachmentTypes = 'image/*,application/pdf,.pdf';
+  protected readonly acceptedAttachmentTypes =
+    'application/pdf,image/png,image/jpeg,image/gif,image/webp,.pdf,.png,.jpg,.jpeg,.gif,.webp';
   protected readonly maxAttachmentSizeBytes = 10 * 1024 * 1024;
   protected readonly maxAttachmentSizeLabel = '10 MB';
   protected readonly MailDeliveryMode = MailDeliveryMode;
