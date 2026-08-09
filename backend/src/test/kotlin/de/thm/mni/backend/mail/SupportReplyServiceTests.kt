@@ -14,7 +14,6 @@ class SupportReplyServiceTests {
     private val supportTicketService = SupportTicketService(mailRepository)
     private val supportTicketLifecycleService = mock(SupportTicketLifecycleService::class.java)
     private val supportReplyService = SupportReplyService(
-        mailRepository = mailRepository,
         supportTicketService = supportTicketService,
         supportTicketLifecycleService = supportTicketLifecycleService
     )

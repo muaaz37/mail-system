@@ -1,3 +1,6 @@
+/**
+ * Relative backend API base path used behind the Caddy reverse proxy.
+ */
 export const API_BASE_URL = '/api';
 
 /**

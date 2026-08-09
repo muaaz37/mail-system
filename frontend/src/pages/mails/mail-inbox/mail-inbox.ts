@@ -31,12 +31,21 @@ export class MailInbox implements OnInit {
     this.loadMails();
   }
 
-  /** Opens the selected internal message. */
+  /**
+   * Opens the selected internal message in the mail detail view.
+   *
+   * @param mail Internal mail selected by the user.
+   */
   protected openMail(mail: Mail): void {
     this.router.navigate(['/mails', mail.id]);
   }
 
-  /** Formats a timestamp like the external ticket overview. */
+  /**
+   * Formats a timestamp as time for today or a compact date otherwise.
+   *
+   * @param dateString ISO timestamp returned by the backend.
+   * @returns User-facing short date label.
+   */
   protected formatDate(dateString: string): string {
     const date = new Date(dateString);
     const today = new Date();
@@ -55,7 +64,12 @@ export class MailInbox implements OnInit {
     });
   }
 
-  /** Builds a compact preview without changing the original message content. */
+  /**
+   * Builds a compact preview without changing the original message content.
+   *
+   * @param mail Internal mail shown in the inbox list.
+   * @returns Shortened text preview for the inbox card.
+   */
   protected preview(mail: Mail): string {
     const content = mail.content?.replace(/\s+/g, ' ').trim();
     if (!content) return 'No text content.';

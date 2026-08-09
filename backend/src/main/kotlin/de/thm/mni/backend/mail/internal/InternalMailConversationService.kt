@@ -56,6 +56,9 @@ class InternalMailConversationService(
         return current
     }
 
+    /**
+     * Adds a mail to the visited set and returns whether traversal may continue.
+     */
     private fun isUnvisited(mail: Mail, visited: MutableSet<UUID>): Boolean {
         val mailId = mail.id ?: return false
         return visited.add(mailId)

@@ -48,7 +48,12 @@ export class MailsService {
     return this.http.get<Mail>(`${API_BASE_URL}/mails/${id}`);
   }
 
-  /** Loads the complete internal conversation containing the selected mail. */
+  /**
+   * Loads the complete internal conversation containing the selected mail.
+   *
+   * @param id Mail identifier returned by the backend.
+   * @returns An observable containing the conversation ordered by message time.
+   */
   public getInternalConversation(id: string): Observable<Mail[]> {
     return this.http.get<Mail[]>(`${API_BASE_URL}/mails/${id}/conversation`);
   }

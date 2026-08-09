@@ -1,5 +1,8 @@
 import { Mail } from '../types/mails';
 
+/**
+ * Presentation model for the sender shown in mail cards and detail headers.
+ */
 export interface MailSenderDisplay {
   name: string;
   email: string | null;
@@ -7,6 +10,12 @@ export interface MailSenderDisplay {
   external: boolean;
 }
 
+/**
+ * Selects a stable sender label for internal users and imported external mails.
+ *
+ * @param mail Mail whose sender should be displayed.
+ * @returns Name, optional email, initials and external-source marker for the UI.
+ */
 export function getMailSenderDisplay(mail: Mail): MailSenderDisplay {
   if (mail.sender) {
     const name = `${mail.sender.firstName} ${mail.sender.lastName}`.trim();
@@ -30,6 +39,12 @@ export function getMailSenderDisplay(mail: Mail): MailSenderDisplay {
   };
 }
 
+/**
+ * Builds two-letter initials from a name or email address.
+ *
+ * @param value Display name or email address.
+ * @returns Uppercase initials used by avatar components.
+ */
 function buildInitials(value: string): string {
   const parts = value
     .split(/[\s@._-]+/)

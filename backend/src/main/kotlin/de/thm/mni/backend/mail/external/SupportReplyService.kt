@@ -1,10 +1,7 @@
 package de.thm.mni.backend.mail.external
 
 import de.thm.mni.backend.error.InvalidMailRequestException
-import de.thm.mni.backend.error.ResourceNotFoundException
 import de.thm.mni.backend.mail.Mail
-import de.thm.mni.backend.mail.MailRepository
-import de.thm.mni.backend.ticket.SupportTicketService
 import de.thm.mni.backend.mail.dto.MailPayload
 import de.thm.mni.backend.mail.dto.ExternalMailReplyTemplate
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
@@ -12,18 +9,17 @@ import de.thm.mni.backend.mail.enums.MailStatus
 import de.thm.mni.backend.mail.toRecipientList
 import de.thm.mni.backend.mail.toRecipientString
 import de.thm.mni.backend.ticket.SupportTicketLifecycleService
+import de.thm.mni.backend.ticket.SupportTicketService
 import jakarta.mail.internet.AddressException
 import jakarta.mail.internet.InternetAddress
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
-import java.util.UUID
 
 /**
  * Builds and applies reply metadata for incoming support mails.
  */
 @Service
 class SupportReplyService(
-    private val mailRepository: MailRepository,
     private val supportTicketService: SupportTicketService,
     private val supportTicketLifecycleService: SupportTicketLifecycleService
 ) {
@@ -52,7 +48,7 @@ class SupportReplyService(
      * Replaces client-supplied primary recipients with the original support sender.
      */
     @Transactional
-    fun enforceReplyRecipient(payload: MailPayload, originalMail: Mail)  {
+    fun enforceReplyRecipient(payload: MailPayload, originalMail: Mail) {
         if (payload.deliveryMode != MailDeliveryMode.EXTERNAL) {
             throw InvalidMailRequestException(
                 "Support replies must be external mails."
@@ -125,6 +121,9 @@ class SupportReplyService(
         mail.subject = supportTicketService.prependTicketIfMissing(mail.subject, ticketNumber)
     }
 
+    /**
+     * Builds the RFC References header for an outgoing support reply.
+     */
     private fun referencesForReply(originalMail: Mail): String {
         return (
             originalMail.externalReferences.toMessageIdList() +
@@ -132,15 +131,14 @@ class SupportReplyService(
             ).toMessageIdHeaderValue()
     }
 
+    /**
+     * Selects the customer address that should receive the support reply.
+     */
     private fun replyRecipientFor(originalMail: Mail): String {
         return originalMail.externalReplyTo.toRecipientList()
             .firstNotNullOfOrNull { recipient -> recipient.emailAddress() }
             ?: originalMail.externalSenderEmail.emailAddress()
             ?: throw InvalidMailRequestException("Incoming support mail has no reply recipient.")
-    }
-
-    private fun getMailById(mailId: UUID): Mail {
-        return mailRepository.findById(mailId).orElse(null) ?: throw ResourceNotFoundException("Mail not found")
     }
 
     /**
@@ -159,6 +157,9 @@ class SupportReplyService(
     }
 }
 
+/**
+ * Detects whether an existing draft already carries support-ticket context.
+ */
 private fun Mail.hasSupportTicketContext(): Boolean {
     return deliveryMode == MailDeliveryMode.EXTERNAL && (ticket != null || ticketNumber != null)
 }

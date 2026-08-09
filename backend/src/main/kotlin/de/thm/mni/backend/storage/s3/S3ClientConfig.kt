@@ -24,6 +24,12 @@ import java.net.URI
 @Configuration
 @EnableConfigurationProperties(S3StorageProperties::class)
 class S3ClientConfig {
+    /**
+     * Creates the S3 client used by the attachment storage adapter.
+     *
+     * @param properties Environment-backed storage configuration.
+     * @return Configured AWS SDK S3 client.
+     */
     @Bean
     fun s3Client(properties: S3StorageProperties): S3Client {
         validate(properties)
@@ -39,6 +45,13 @@ class S3ClientConfig {
             .build()
     }
 
+    /**
+     * Initializes the configured bucket on startup when bucket creation is enabled.
+     *
+     * @param s3Client S3 client used for bucket checks.
+     * @param properties Environment-backed storage configuration.
+     * @return Application runner executed during backend startup.
+     */
     @Bean
     fun s3BucketInitializer(s3Client: S3Client, properties: S3StorageProperties): ApplicationRunner {
         return ApplicationRunner {
@@ -49,6 +62,9 @@ class S3ClientConfig {
         }
     }
 
+    /**
+     * Validates configuration required for attachment storage.
+     */
     private fun validate(properties: S3StorageProperties) {
         val missingValues = mutableListOf<String>()
         if (properties.endpoint.isBlank()) {
@@ -65,6 +81,9 @@ class S3ClientConfig {
         }
     }
 
+    /**
+     * Selects anonymous or static credentials depending on the configured storage mode.
+     */
     private fun credentialsProvider(properties: S3StorageProperties): AwsCredentialsProvider {
         if (properties.credentialsAreIncomplete()) {
             return AnonymousCredentialsProvider.create()
@@ -75,6 +94,9 @@ class S3ClientConfig {
         )
     }
 
+    /**
+     * Retries bucket initialization while SeaweedFS is still starting in Docker Compose.
+     */
     private fun ensureBucketWithRetry(s3Client: S3Client, properties: S3StorageProperties) {
         var lastFailure: Exception? = null
         repeat(BUCKET_INIT_ATTEMPTS) { attempt ->
@@ -92,6 +114,9 @@ class S3ClientConfig {
         throw FileStorageException("Could not initialize S3 bucket '${properties.bucket}'.", lastFailure)
     }
 
+    /**
+     * Creates the bucket when it does not exist and propagates all other S3 errors.
+     */
     private fun ensureBucket(s3Client: S3Client, bucket: String) {
         try {
             s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build())
@@ -110,6 +135,9 @@ class S3ClientConfig {
     }
 }
 
+/**
+ * Checks whether both parts of the static S3 credentials are present.
+ */
 private fun S3StorageProperties.credentialsAreIncomplete(): Boolean {
     return accessKey.isBlank() || secretKey.isBlank()
 }

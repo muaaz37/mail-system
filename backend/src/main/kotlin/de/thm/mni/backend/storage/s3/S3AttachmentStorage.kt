@@ -29,6 +29,12 @@ class S3AttachmentStorage(
     private val s3Client: S3Client,
     private val properties: S3StorageProperties
 ) : AttachmentStorage {
+    /**
+     * Stores a multipart attachment uploaded through the REST API.
+     *
+     * @param file Browser-uploaded multipart file.
+     * @return Attachment metadata, or null when the upload is empty.
+     */
     override fun save(file: MultipartFile): AttachmentDTO? {
         if (file.isEmpty) {
             return null
@@ -41,6 +47,14 @@ class S3AttachmentStorage(
         }
     }
 
+    /**
+     * Stores an attachment byte array under a generated object key.
+     *
+     * @param fileName Original file name used only as metadata and for the object-key extension.
+     * @param mimeType MIME type reported by the source message.
+     * @param bytes Binary attachment content.
+     * @return Attachment metadata, or null when the content is empty.
+     */
     override fun save(fileName: String?, mimeType: String?, bytes: ByteArray): AttachmentDTO? {
         if (bytes.isEmpty()) {
             return null
@@ -72,6 +86,11 @@ class S3AttachmentStorage(
         )
     }
 
+    /**
+     * Deletes one object from the configured bucket.
+     *
+     * @param objectKey Storage object key persisted on the attachment entity.
+     */
     override fun delete(objectKey: String) {
         try {
             s3Client.deleteObject(
@@ -85,6 +104,12 @@ class S3AttachmentStorage(
         }
     }
 
+    /**
+     * Loads one object from the configured bucket for download or SMTP delivery.
+     *
+     * @param objectKey Storage object key persisted on the attachment entity.
+     * @return Binary object data with content type and length metadata.
+     */
     override fun load(objectKey: String): StoredAttachmentObject {
         val responseBytes = try {
             s3Client.getObjectAsBytes(
@@ -102,6 +127,9 @@ class S3AttachmentStorage(
         return responseBytes.toStoredObject()
     }
 
+    /**
+     * Converts an S3 byte response into the storage-independent attachment object.
+     */
     private fun ResponseBytes<GetObjectResponse>.toStoredObject(): StoredAttachmentObject {
         return StoredAttachmentObject(
             resource = ByteArrayResource(asByteArray()),
@@ -110,6 +138,9 @@ class S3AttachmentStorage(
         )
     }
 
+    /**
+     * Maps S3 load errors to application storage exceptions with safe messages.
+     */
     private fun mapLoadFailure(objectKey: String, ex: S3Exception): RuntimeException {
         return if (ex.statusCode() == HTTP_NOT_FOUND) {
             FileStorageObjectNotFoundException("Stored object '$objectKey' was not found.", ex)
@@ -118,6 +149,9 @@ class S3AttachmentStorage(
         }
     }
 
+    /**
+     * Removes path information from client-provided filenames before they become metadata.
+     */
     private fun sanitizeFilename(originalFilename: String?): String {
         return originalFilename
             ?.takeIf { name -> name.isNotBlank() }
@@ -125,6 +159,9 @@ class S3AttachmentStorage(
             ?: DEFAULT_ATTACHMENT_FILENAME
     }
 
+    /**
+     * Keeps the original extension in generated object keys so downloads remain recognizable.
+     */
     private fun fileExtension(filename: String): String {
         val extensionStart = filename.lastIndexOf(".")
         return if (extensionStart > 0 && extensionStart < filename.lastIndex) {

@@ -25,6 +25,13 @@ const TECHNICAL_MESSAGE_PATTERNS = [
   /https?:\/\//i,
 ];
 
+/**
+ * Converts an HTTP failure into safe user-facing text without exposing backend internals.
+ *
+ * @param error Error object received from Angular HTTP calls.
+ * @param fallback Message used when the error cannot be interpreted safely.
+ * @returns Sanitized error text suitable for toast notifications.
+ */
 export function readApiErrorMessage(error: unknown, fallback = 'An error occurred'): string {
   if (!(error instanceof HttpErrorResponse)) {
     return fallback;
@@ -59,11 +66,23 @@ export function readApiErrorMessage(error: unknown, fallback = 'An error occurre
   return fallback;
 }
 
+/**
+ * Extracts the structured API message returned by the backend error handler.
+ *
+ * @param error HTTP error response from Angular.
+ * @returns Trimmed API message, or null when no usable message exists.
+ */
 function extractApiMessage(error: HttpErrorResponse): string | null {
   const message = error.error?.message;
   return typeof message === 'string' && message.trim().length > 0 ? message.trim() : null;
 }
 
+/**
+ * Detects messages that look like stack traces, infrastructure details or raw exception output.
+ *
+ * @param message Candidate server message.
+ * @returns True when the message should be replaced by a safe fallback.
+ */
 function looksTechnical(message: string): boolean {
   return TECHNICAL_MESSAGE_PATTERNS.some((pattern) => pattern.test(message));
 }

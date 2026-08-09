@@ -115,13 +115,19 @@ export class MailDetails implements OnInit {
     return mail?.deliveryMode === MailDeliveryMode.EXTERNAL && !!mail.ticketId;
   }
 
-  /** Returns whether the internal conversation action is available. */
+  /**
+   * Checks whether the internal conversation action is available.
+   *
+   * @returns True when the displayed mail belongs to an internal sent conversation.
+   */
   canViewConversation(): boolean {
     const mail = this.mail();
     return mail?.deliveryMode === MailDeliveryMode.INTERNAL && mail.status === MailStatus.SENT;
   }
 
-  /** Loads the internal conversation once and toggles its visibility. */
+  /**
+   * Loads the internal conversation on first use and toggles its visibility afterwards.
+   */
   toggleConversation(): void {
     const mail = this.mail();
     if (!mail || !this.canViewConversation()) return;

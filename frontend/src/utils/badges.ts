@@ -1,4 +1,15 @@
-export const getSeverityBadge = (status: string) => {
+/**
+ * PrimeNG tag severity values used by badge helper functions.
+ */
+export type BadgeSeverity = 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast';
+
+/**
+ * Maps a mail status to the PrimeNG severity used by status tags.
+ *
+ * @param status Backend mail status.
+ * @returns PrimeNG severity name.
+ */
+export const getSeverityBadge = (status: string): BadgeSeverity => {
   switch (status) {
     case 'SENT':
       return 'success';
@@ -9,10 +20,15 @@ export const getSeverityBadge = (status: string) => {
     default:
       return 'info';
   }
-}
+};
 
-
-export const getSourceBadge = (source: string) => {
+/**
+ * Maps the mail source to the PrimeNG severity used by source tags.
+ *
+ * @param source Backend mail source.
+ * @returns PrimeNG severity name.
+ */
+export const getSourceBadge = (source: string): BadgeSeverity => {
   switch (source) {
     case 'INTERN':
       return 'secondary';
@@ -21,4 +37,4 @@ export const getSourceBadge = (source: string) => {
     default:
       return 'info';
   }
-}
+};
