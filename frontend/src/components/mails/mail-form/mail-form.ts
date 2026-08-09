@@ -54,10 +54,10 @@ export class MailForm implements OnInit, OnChanges {
   @Input() replyTemplate: MailReplyTemplate | null = null;
   @Input() title = 'Create Mail';
 
-  private mailsService = inject(MailsService);
-  private messageService = inject(MessageService);
-  private authService = inject(AuthService);
-  private router = inject(Router);
+  private readonly mailsService = inject(MailsService);
+  private readonly messageService = inject(MessageService);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   protected mailForm = new FormGroup({
     subject: new FormControl('', [Validators.required, Validators.maxLength(500)]),
@@ -511,7 +511,7 @@ export class MailForm implements OnInit, OnChanges {
         return;
       }
 
-      this.mailsService.updateMails(this.mailData.id, mailData, attachments).subscribe({
+      this.mailsService.updateMail(this.mailData.id, mailData, attachments).subscribe({
         next: () => this.handleMailSuccess('Mail updated successfully', '/mails/drafts'),
         error: (error) => this.handleMailError(error, 'Failed to update mail'),
       });
@@ -563,7 +563,7 @@ export class MailForm implements OnInit, OnChanges {
     this.isLoading.set(true);
 
     this.mailsService
-      .updateMails(this.mailData.id, mailData, attachments)
+      .updateMail(this.mailData.id, mailData, attachments)
       .pipe(switchMap((updatedMail) => this.mailsService.sendMail(updatedMail.id)))
       .subscribe({
         next: () => this.handleMailSuccess('Draft sent successfully', '/mails/sent'),

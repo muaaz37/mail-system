@@ -42,11 +42,11 @@ import { MailConversation } from './conversation/mail-conversation';
 export class MailDetails implements OnInit {
   @Input() protected id!: string;
 
-  private authService = inject(AuthService);
-  private mailsService = inject(MailsService);
-  private messageService = inject(MessageService);
-  private router = inject(Router);
-  private location = inject(Location);
+  private readonly authService = inject(AuthService);
+  private readonly mailsService = inject(MailsService);
+  private readonly messageService = inject(MessageService);
+  private readonly router = inject(Router);
+  private readonly location = inject(Location);
 
   protected mail = signal<Mail | null>(null);
   protected isLoading = signal(true);

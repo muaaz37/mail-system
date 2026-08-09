@@ -32,10 +32,10 @@ export class TicketDetails implements OnInit {
   protected readonly SupportTicketPriority = SupportTicketPriority;
   protected readonly priorities = Object.values(SupportTicketPriority);
 
-  private ticketsService = inject(TicketsService);
-  private messageService = inject(MessageService);
-  private router = inject(Router);
-  private location = inject(Location);
+  private readonly ticketsService = inject(TicketsService);
+  private readonly messageService = inject(MessageService);
+  private readonly router = inject(Router);
+  private readonly location = inject(Location);
 
   /**
    * Loads the selected ticket and lets the backend mark it as read for the current user.

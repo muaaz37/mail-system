@@ -18,7 +18,7 @@ export class LoginForm implements OnInit {
   /**
    * Checks if the user is already authenticated on component initialization and redirects to the mails page if so.
    */
-  public ngOnInit(): void {
+  ngOnInit(): void {
     if (this.authService.isAuthenticated()) {
       void this.router.navigate(['/mails']);
     }

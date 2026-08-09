@@ -13,7 +13,7 @@ import {
   providedIn: 'root',
 })
 export class TicketsService {
-  private http = inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
   /**
    * Loads support tickets for the selected workflow view.
@@ -21,7 +21,7 @@ export class TicketsService {
    * @param view Queue filter requested by the user interface.
    * @returns An observable containing matching support tickets.
    */
-  public getTickets(view: TicketView): Observable<SupportTicket[]> {
+  getTickets(view: TicketView): Observable<SupportTicket[]> {
     return this.http.get<SupportTicket[]>(`${API_BASE_URL}/tickets`, { params: { view } });
   }
 
@@ -31,7 +31,7 @@ export class TicketsService {
    * @param id Support ticket identifier.
    * @returns An observable containing ticket metadata and related mails.
    */
-  public getTicket(id: string): Observable<SupportTicketDetail> {
+  getTicket(id: string): Observable<SupportTicketDetail> {
     return this.http.get<SupportTicketDetail>(`${API_BASE_URL}/tickets/${id}`);
   }
 
@@ -41,7 +41,7 @@ export class TicketsService {
    * @param id Support ticket identifier.
    * @returns An observable containing the updated ticket.
    */
-  public assignToMe(id: string): Observable<SupportTicket> {
+  assignToMe(id: string): Observable<SupportTicket> {
     return this.http.post<SupportTicket>(`${API_BASE_URL}/tickets/${id}/assign/me`, {});
   }
 
@@ -51,7 +51,7 @@ export class TicketsService {
    * @param id Support ticket identifier.
    * @returns An observable containing the updated ticket.
    */
-  public unassign(id: string): Observable<SupportTicket> {
+  unassign(id: string): Observable<SupportTicket> {
     return this.http.delete<SupportTicket>(`${API_BASE_URL}/tickets/${id}/assign`);
   }
 
@@ -61,7 +61,7 @@ export class TicketsService {
    * @param id Support ticket identifier.
    * @returns An observable containing the updated ticket.
    */
-  public resolve(id: string): Observable<SupportTicket> {
+  resolve(id: string): Observable<SupportTicket> {
     return this.http.post<SupportTicket>(`${API_BASE_URL}/tickets/${id}/resolve`, {});
   }
 
@@ -71,7 +71,7 @@ export class TicketsService {
    * @param id Support ticket identifier.
    * @returns An observable containing the updated ticket.
    */
-  public reopen(id: string): Observable<SupportTicket> {
+  reopen(id: string): Observable<SupportTicket> {
     return this.http.post<SupportTicket>(`${API_BASE_URL}/tickets/${id}/reopen`, {});
   }
 
@@ -82,7 +82,7 @@ export class TicketsService {
    * @param priority New priority selected by the user.
    * @returns An observable containing the updated ticket.
    */
-  public updatePriority(id: string, priority: SupportTicketPriority): Observable<SupportTicket> {
+  updatePriority(id: string, priority: SupportTicketPriority): Observable<SupportTicket> {
     return this.http.put<SupportTicket>(`${API_BASE_URL}/tickets/${id}/priority`, { priority });
   }
 }

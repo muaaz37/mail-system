@@ -9,14 +9,14 @@ import { User } from '../../types/user';
   providedIn: 'root',
 })
 export class MailsService {
-  private http = inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
   /**
    * Loads all incoming mails visible to the authenticated support user.
    *
    * @returns An observable containing received internal mails and imported support mails.
    */
-  public getIncomingMails(): Observable<Mail[]> {
+  getIncomingMails(): Observable<Mail[]> {
     return this.http.get<Mail[]>(`${API_BASE_URL}/mails/incoming`);
   }
 
@@ -25,7 +25,7 @@ export class MailsService {
    *
    * @returns An observable containing editable draft mails.
    */
-  public getDrafts(): Observable<Mail[]> {
+  getDrafts(): Observable<Mail[]> {
     return this.http.get<Mail[]>(`${API_BASE_URL}/mails/drafts`);
   }
 
@@ -34,7 +34,7 @@ export class MailsService {
    *
    * @returns An observable containing sent mails.
    */
-  public getSentMails(): Observable<Mail[]> {
+  getSentMails(): Observable<Mail[]> {
     return this.http.get<Mail[]>(`${API_BASE_URL}/mails/sent`);
   }
 
@@ -44,12 +44,12 @@ export class MailsService {
    * @param id Mail identifier returned by the backend.
    * @returns An observable containing the requested mail.
    */
-  public getMailById(id: string): Observable<Mail> {
+  getMailById(id: string): Observable<Mail> {
     return this.http.get<Mail>(`${API_BASE_URL}/mails/${id}`);
   }
 
   /** Loads the complete internal conversation containing the selected mail. */
-  public getInternalConversation(id: string): Observable<Mail[]> {
+  getInternalConversation(id: string): Observable<Mail[]> {
     return this.http.get<Mail[]>(`${API_BASE_URL}/mails/${id}/conversation`);
   }
 
@@ -59,7 +59,7 @@ export class MailsService {
    * @param id Identifier of the mail that should be answered.
    * @returns An observable containing the locked delivery mode, recipients and subject.
    */
-  public getReplyTemplate(id: string): Observable<MailReplyTemplate> {
+  getReplyTemplate(id: string): Observable<MailReplyTemplate> {
     return this.http.get<MailReplyTemplate>(`${API_BASE_URL}/mails/${id}/reply-template`);
   }
 
@@ -69,7 +69,7 @@ export class MailsService {
    * @param id Draft mail identifier.
    * @returns An observable that completes when sending succeeds.
    */
-  public sendMail(id: string): Observable<void> {
+  sendMail(id: string): Observable<void> {
     return this.http.post<void>(`${API_BASE_URL}/mails/send/${id}`, {});
   }
 
@@ -79,7 +79,7 @@ export class MailsService {
    * @param id Mail identifier.
    * @returns An observable that completes when deletion succeeds.
    */
-  public deleteMail(id: string): Observable<void> {
+  deleteMail(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/mails/${id}`);
   }
 
@@ -88,7 +88,7 @@ export class MailsService {
    *
    * @returns An observable containing all known application users.
    */
-  public getAllUsers(): Observable<User[]> {
+  getAllUsers(): Observable<User[]> {
     return this.http.get<User[]>(`${API_BASE_URL}/users`);
   }
 
@@ -99,7 +99,7 @@ export class MailsService {
    * @param files Browser file objects selected by the user.
    * @returns An observable containing the persisted draft.
    */
-  public createDraft(mail: CreateMail, files: File[]): Observable<Mail> {
+  createDraft(mail: CreateMail, files: File[]): Observable<Mail> {
     const formData = this.createFormData(mail, files);
     return this.http.post<Mail>(`${API_BASE_URL}/mails`, formData);
   }
@@ -111,7 +111,7 @@ export class MailsService {
    * @param files Browser file objects selected by the user.
    * @returns An observable containing the created sent mail.
    */
-  public createAndSendMail(mail: CreateMail, files: File[]): Observable<Mail> {
+  createAndSendMail(mail: CreateMail, files: File[]): Observable<Mail> {
     const formData = this.createFormData(mail, files);
     return this.http.post<Mail>(`${API_BASE_URL}/mails/send`, formData);
   }
@@ -124,7 +124,7 @@ export class MailsService {
    * @param files Current attachment files that should remain on the draft.
    * @returns An observable containing the updated draft.
    */
-  public updateMails(id: string, mail: UpdateMail, files: File[]): Observable<Mail> {
+  updateMail(id: string, mail: UpdateMail, files: File[]): Observable<Mail> {
     const formData = this.createFormData(mail, files);
     return this.http.put<Mail>(`${API_BASE_URL}/mails/${id}`, formData);
   }
@@ -135,7 +135,7 @@ export class MailsService {
    * @param filename Storage key or attachment path returned by the backend.
    * @returns An observable containing the binary attachment blob.
    */
-  public fetchAttachment(filename: string): Observable<Blob> {
+  fetchAttachment(filename: string): Observable<Blob> {
     return this.http.get(`${API_BASE_URL}/images/${filename}`, { responseType: 'blob' });
   }
 

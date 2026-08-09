@@ -16,8 +16,8 @@ import { readApiErrorMessage } from '../../../utils/api-error-message';
 export class MailCreate implements OnInit {
   @Input() protected id?: string;
 
-  private mailsService = inject(MailsService);
-  private messageService = inject(MessageService);
+  private readonly mailsService = inject(MailsService);
+  private readonly messageService = inject(MessageService);
 
   protected replyTemplate = signal<MailReplyTemplate | null>(null);
   protected isLoading = signal(false);
