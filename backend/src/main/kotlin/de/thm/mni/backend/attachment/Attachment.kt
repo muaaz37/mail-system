@@ -20,10 +20,10 @@ import java.util.UUID
 class Attachment {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    var id : UUID? = null
+    var id: UUID? = null
 
     @Column(name = "file_name")
-    var fileName: String?= ""
+    var fileName: String? = ""
 
     @Column(name = "size")
     var size: Long = 0

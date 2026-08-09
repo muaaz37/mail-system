@@ -8,7 +8,7 @@ import java.util.UUID
 /**
  * Provides database access for mail entities and support ticket lookup checks.
  */
-interface MailRepository: CrudRepository<Mail, UUID> {
+interface MailRepository : CrudRepository<Mail, UUID> {
     fun findAllBySender(sender: User): MutableList<Mail>
     fun findAllByStatus(status: MailStatus): MutableList<Mail>
     fun findAllByInReplyToMail(inReplyToMail: Mail): List<Mail>
