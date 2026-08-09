@@ -45,8 +45,7 @@ class SupportTicketLifecycleService(
         }
 
         val ticket = findOrCreateTicket(mail)
-        ticket.status = SupportTicketStatus.WAITING_FOR_SUPPORT
-        ticket.closedAt = null
+        ticket.markWaitingForSupport()
         enrichTicketFromMail(ticket, mail)
         mail.ticketNumber = ticket.ticketNumber
         mail.ticket = ticket
@@ -85,8 +84,7 @@ class SupportTicketLifecycleService(
     @Transactional
     fun markWaitingForCustomer(mail: Mail) {
         val ticket = mail.ticket ?: return
-        ticket.status = SupportTicketStatus.WAITING_FOR_CUSTOMER
-        ticket.closedAt = null
+        ticket.markWaitingForCustomer()
         val savedTicket = ticketRepository.save(ticket)
         mail.sender?.let { sender -> readStateService.markRead(savedTicket, sender) }
     }
@@ -97,7 +95,6 @@ class SupportTicketLifecycleService(
             ?: findTicketByTrustedSubject(mail)
             ?: SupportTicket().apply {
                 ticketNumber = supportTicketService.generateUniqueTicketNumber()
-                status = SupportTicketStatus.WAITING_FOR_SUPPORT
             }
     }
 
