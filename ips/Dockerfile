@@ -1,18 +1,27 @@
-FROM haproxy:3.2-alpine
+FROM alpine:3.23
 
-# Use an unprivileged account because HAProxy listens only on ports above 1024.
-COPY --chown=65532:65532 \
-  haproxy.cfg \
-  /usr/local/etc/haproxy/haproxy.cfg
+# Install Snort 3, the NFQUEUE DAQ and required networking tools.
+RUN apk add --no-cache bash daq iproute2 iptables snort
 
-# Run HAProxy as an unprivileged user.
-USER 65532:65532
+# Ensure that Snort supports NFQUEUE inline processing.
+RUN snort --daq-list | grep -q "nfq"
 
-# Internal container ports:
-#   8080 -> forwards HTTP to the WAF's redirect listener
-#   8443 -> forwards encrypted TLS traffic to the WAF
-EXPOSE 8080 8443
+# Download and install the official Snort 3 community rules.
+RUN wget -qO /tmp/snort3-community-rules.tar.gz \
+      https://www.snort.org/downloads/community/snort3-community-rules.tar.gz \
+    && tar -xzf /tmp/snort3-community-rules.tar.gz -C /etc/snort/ \
+    && rm /tmp/snort3-community-rules.tar.gz
 
-# Run a health check to ensure that HAProxy is running and the configuration is valid.
-HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
-  CMD haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg || exit 1
+# Copy the Snort configuration file into the container.
+COPY snort.lua /etc/snort/snort.lua
+COPY local.rules /etc/snort/local.rules
+
+# Copy the container startup scripts.
+COPY --chmod=0755 entrypoint.sh /entrypoint.sh
+COPY --chmod=0755 snort.sh /snort.sh
+
+# Configure the network before starting Snort.
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Start Snort in inline IPS mode.
+CMD ["/snort.sh"]

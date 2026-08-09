@@ -19,12 +19,28 @@ services:
     ports:
       - "${HTTP_HOST_PORT:-80}:8080"
       - "${HTTPS_HOST_PORT:-443}:8443"
+    environment:
+      FORWARD_HOST: proxy
+      FORWARD_PORTS: "8080 8443"
+      NETWORK_INTERFACE_NAME: eth0
+    # Remove all capabilities and add only those required by Snort,
+    # iptables and NFQUEUE.
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+      - NET_ADMIN
+      - NET_RAW
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    # Enable packet forwarding between the IPS and WAF containers.
+    sysctls:
+      net.ipv4.ip_forward: "1"
     depends_on:
       proxy:
         condition: service_healthy
-    <<: *read-only-container
-    tmpfs:
-      - /tmp:rw,noexec,nosuid,size=16m
     networks:
       - gateway-waf
 
@@ -254,7 +270,7 @@ volumes:
   keycloak_db_data:
 
 networks:
-  # Public edge network between the HAProxy gateway and the ModSecurity WAF
+  # Network between the Snort IPS and the ModSecurity WAF.
   gateway-waf:
 
   # Isolated connection between the WAF and the frontend.
