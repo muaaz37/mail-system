@@ -14,7 +14,7 @@ import java.util.UUID
  */
 @Service
 class MailAccessService(
-    private val mailService: MailService,
+    private val mailQueryService: MailQueryService,
     private val mailRecordService: MailRecordService,
     private val currentUserService: CurrentUserService
 ) {
@@ -27,7 +27,7 @@ class MailAccessService(
      * Loads a mail or hides missing mails behind a not-found error.
      */
     fun mailOrNotFound(mailId: UUID): Mail {
-        return mailService.getMailById(mailId) ?: throw ResourceNotFoundException("Mail not found")
+        return mailQueryService.getMailById(mailId) ?: throw ResourceNotFoundException("Mail not found")
     }
 
     /**

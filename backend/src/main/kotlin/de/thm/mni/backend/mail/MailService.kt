@@ -32,39 +32,6 @@ class MailService(
     private val mailReplyService: MailReplyService
 ) {
     /**
-     * Loads one mail by its identifier without applying authorization rules.
-     */
-    fun getMailById(id: UUID): Mail? {
-        return mailRepository.findById(id).orElse(null)
-    }
-
-    /**
-     * Returns all draft mails created by the given user.
-     */
-    fun getAllCreatedUserMails(user: User): List<Mail> {
-        return mailRepository.findAllBySender(user).toList().filter { mail -> mail.status == MailStatus.DRAFT }
-    }
-
-    /**
-     * Returns all sent mails created by the given user.
-     */
-    fun getAllSentUserMails(user: User): List<Mail> {
-        return mailRepository.findAllBySender(user)
-            .filter { mail -> mail.status == MailStatus.SENT }
-            .sortedByDescending { mail -> mail.sentAt ?: mail.createdAt }
-    }
-
-    /**
-     * Returns internal incoming mails plus imported support mails visible to all team profiles.
-     */
-    fun getIncomingMailsForUser(userId: UUID): List<Mail> {
-        val internalIncomingMails = mailRecordService.getAllIncomingMailsForUser(userId)
-        val importedSupportMails = mailRepository.findAllByStatus(MailStatus.RECEIVED)
-            .filter { mail -> mail.sender == null }
-        return (internalIncomingMails + importedSupportMails).distinctBy { mail -> mail.id }
-    }
-
-    /**
      * Deletes a mail with its stored attachments and internal recipient records.
      */
     @Transactional
@@ -139,7 +106,7 @@ class MailService(
      */
     @Transactional
     fun updateMail(id: UUID, mail: MailUpdate, attachments: List<MultipartFile>): Mail {
-        val existingMail = getMailById(id)!!
+        val existingMail = mailRepository.findById(id).orElseThrow()
         val sender = requireNotNull(existingMail.sender)
         val storedOriginalMail = existingMail.inReplyToMail
 

@@ -50,6 +50,7 @@ import java.util.UUID
 @RequestMapping("/api/mails", produces = [MediaType.APPLICATION_JSON_VALUE])
 class MailController(
     private val mailService: MailService,
+    private val mailQueryService: MailQueryService,
     private val mailAccessService: MailAccessService,
     private val mailMapper: MailMapper,
     private val mailReplyService: MailReplyService,
@@ -68,7 +69,7 @@ class MailController(
     @ApiResponse(responseCode = "200", description = "Draft mails returned successfully.")
     fun getCreatedMails(@AuthenticationPrincipal jwt: Jwt): List<MailDTO> {
         val user = mailAccessService.authenticatedUser(jwt)
-        val userMails = mailService.getAllCreatedUserMails(user)
+        val userMails = mailQueryService.getAllCreatedUserMails(user)
         return userMails.map { mail -> mailMapper.toDTO(user, mail) }
     }
 
@@ -84,7 +85,7 @@ class MailController(
     @ApiResponse(responseCode = "200", description = "Sent mails returned successfully.")
     fun getSentMails(@AuthenticationPrincipal jwt: Jwt): List<MailDTO> {
         val user = mailAccessService.authenticatedUser(jwt)
-        val userMails = mailService.getAllSentUserMails(user)
+        val userMails = mailQueryService.getAllSentUserMails(user)
         return userMails.map { mail -> mailMapper.toDTO(user, mail) }
     }
 
@@ -129,7 +130,7 @@ class MailController(
     @ApiResponse(responseCode = "200", description = "Incoming mails returned successfully.")
     fun getIncomingMailsForUser(@AuthenticationPrincipal jwt: Jwt): List<MailDTO> {
         val user = mailAccessService.authenticatedUser(jwt)
-        val userMails = mailService.getIncomingMailsForUser(user.id!!)
+        val userMails = mailQueryService.getIncomingMailsForUser(user.id!!)
         return userMails.map { mail -> mailMapper.toDTO(user, mail) }
     }
 
