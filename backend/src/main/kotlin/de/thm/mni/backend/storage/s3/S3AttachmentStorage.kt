@@ -2,8 +2,10 @@ package de.thm.mni.backend.storage.s3
 
 import de.thm.mni.backend.attachment.dto.AttachmentDTO
 import de.thm.mni.backend.storage.AttachmentStorage
+import de.thm.mni.backend.storage.AttachmentContentTypes
 import de.thm.mni.backend.storage.FileStorageException
 import de.thm.mni.backend.storage.FileStorageObjectNotFoundException
+import de.thm.mni.backend.storage.UnsupportedAttachmentTypeException
 import de.thm.mni.backend.storage.StoredAttachmentObject
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.stereotype.Component
@@ -35,7 +37,18 @@ class S3AttachmentStorage(
         }
 
         return try {
-            save(file.originalFilename, file.contentType, file.bytes)
+            val bytes = file.bytes
+            val detectedType = AttachmentContentTypes.detect(bytes)
+                ?: throw UnsupportedAttachmentTypeException(
+                    "Only PDF, PNG, JPEG, GIF and WebP attachments are allowed."
+                )
+            val claimedType = AttachmentContentTypes.normalizeClaimedType(file.contentType)
+            if (claimedType != detectedType) {
+                throw UnsupportedAttachmentTypeException(
+                    "The attachment content does not match its declared media type."
+                )
+            }
+            save(file.originalFilename, detectedType, bytes)
         } catch (ex: IOException) {
             throw FileStorageException("Failed to read uploaded file content.", ex)
         }
@@ -48,7 +61,9 @@ class S3AttachmentStorage(
 
         val safeFilename = sanitizeFilename(fileName)
         val objectKey = UUID.randomUUID().toString() + fileExtension(safeFilename)
-        val contentType = mimeType?.takeIf { type -> type.isNotBlank() } ?: DEFAULT_CONTENT_TYPE
+        // Imported email attachments may contain other formats. Store those as
+        // binary downloads instead of trusting externally supplied MIME data.
+        val contentType = AttachmentContentTypes.detect(bytes) ?: AttachmentContentTypes.BINARY
 
         val request = PutObjectRequest.builder()
             .bucket(properties.bucket)
@@ -136,7 +151,6 @@ class S3AttachmentStorage(
 
     private companion object {
         const val DEFAULT_ATTACHMENT_FILENAME = "attachment"
-        const val DEFAULT_CONTENT_TYPE = "application/octet-stream"
         const val ORIGINAL_FILENAME_METADATA = "original-filename"
         const val HTTP_NOT_FOUND = 404
     }
