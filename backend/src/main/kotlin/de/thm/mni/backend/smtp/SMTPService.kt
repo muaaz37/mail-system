@@ -2,6 +2,7 @@ package de.thm.mni.backend.smtp
 
 import de.thm.mni.backend.config.SupportMailProperties
 import de.thm.mni.backend.mail.Mail
+import de.thm.mni.backend.mail.MailSender
 import de.thm.mni.backend.mail.toRecipientList
 import de.thm.mni.backend.storage.FileStorageException
 import de.thm.mni.backend.storage.FileStorageService
@@ -18,18 +19,18 @@ import org.springframework.stereotype.Service
  */
 @Service
 class SMTPService(
-    private val mailSender: JavaMailSender,
+    private val javaMailSender: JavaMailSender,
     private val fileStorageService: FileStorageService,
     private val supportMailProperties: SupportMailProperties
-) {
+) : MailSender {
     private val logger = LoggerFactory.getLogger(SMTPService::class.java)
 
     /**
      * Builds a MIME message from a stored mail and sends it with attachments.
      */
-    fun sendEmail(mail: Mail): Boolean {
+    override fun send(mail: Mail): Boolean {
         return try {
-            val mimeMessage = mailSender.createMimeMessage()
+            val mimeMessage = javaMailSender.createMimeMessage()
             val helper = MimeMessageHelper(mimeMessage, true, "UTF-8")
 
             mimeMessage.setHeader(APP_ORIGIN_HEADER, APP_ORIGIN_VALUE)
@@ -48,7 +49,7 @@ class SMTPService(
             setRecipients(helper, mail)
             addAttachments(helper, mail)
 
-            mailSender.send(mimeMessage)
+            javaMailSender.send(mimeMessage)
             true
         } catch (ex: MessagingException) {
             logSendFailure(mail, ex)
