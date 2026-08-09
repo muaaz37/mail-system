@@ -57,7 +57,7 @@ class DatabaseInitializer(
                 attachments = mutableListOf()
             )
             if (dto.status == MailStatus.SENT) {
-                mail.status = MailStatus.SENT
+                mail.markAsSent()
             }
             val createdMail = mailRepository.save(mail)
             createMailRecords(createdMail, dto.toEmails, dto.ccEmails, dto.bccEmails, dto.replyToEmails)

@@ -58,7 +58,7 @@ class MailService(
             }
         }
 
-        mail.status = MailStatus.SENT
+        mail.markAsSent()
         val sentMail = mailRepository.save(mail)
         // Internal messages stay regular application mails. Only external support
         // replies participate in the support-ticket lifecycle.

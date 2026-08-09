@@ -1,7 +1,6 @@
 package de.thm.mni.backend.mail
 
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
-import de.thm.mni.backend.mail.enums.MailStatus
 import de.thm.mni.backend.mail.external.SupportReplyService
 import de.thm.mni.backend.ticket.SupportTicketLifecycleService
 import de.thm.mni.backend.ticket.SupportTicketService
@@ -22,7 +21,6 @@ class SupportReplyServiceTests {
     @Test
     fun `ticket subject is restored for stored support reply drafts`() {
         val draft = Mail().apply {
-            status = MailStatus.DRAFT
             deliveryMode = MailDeliveryMode.EXTERNAL
             ticketNumber = "TICKET-123456"
             subject = "Re: Cannot open portal"

@@ -72,7 +72,7 @@ class MailImportService(
             sender = null
             subject = imapMail.subject
             content = imapMail.body ?: ""
-            status = MailStatus.RECEIVED
+            markAsReceived()
             deliveryMode = MailDeliveryMode.EXTERNAL
             externalSenderEmail = senderAddress?.address
             externalSenderName = senderAddress?.personal

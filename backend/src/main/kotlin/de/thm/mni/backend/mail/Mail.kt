@@ -56,6 +56,7 @@ class Mail {
     @Column
     @Enumerated(EnumType.STRING)
     var status: MailStatus = MailStatus.DRAFT
+        private set
 
     @Column(name = "delivery_mode")
     @Enumerated(EnumType.STRING)
@@ -72,6 +73,7 @@ class Mail {
 
     @Column(name = "sent_at")
     var sentAt: LocalDateTime? = null
+        private set
 
     @Column(name = "external_sender_email")
     var externalSenderEmail: String? = null
@@ -133,6 +135,19 @@ class Mail {
     fun removeAttachment(attachment: Attachment) {
         attachments.remove(attachment)
         attachment.mail = null
+    }
+
+    /** Moves a draft into its final sent state. */
+    fun markAsSent() {
+        check(status == MailStatus.DRAFT) { "Only draft mails can be sent" }
+        status = MailStatus.SENT
+        sentAt = LocalDateTime.now()
+    }
+
+    /** Marks a newly imported external message as received. */
+    fun markAsReceived() {
+        check(status == MailStatus.DRAFT) { "Only new mails can be marked as received" }
+        status = MailStatus.RECEIVED
     }
 
     /**
