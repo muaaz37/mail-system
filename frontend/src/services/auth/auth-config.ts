@@ -16,7 +16,7 @@ export const authConfig: AuthConfig = {
   redirectUri: applicationBaseUrl,
   postLogoutRedirectUri: applicationBaseUrl,
   scope: 'openid profile email',
-  requireHttps: false,
+  requireHttps: location.hostname !== 'localhost',
   strictDiscoveryDocumentValidation: true,
   showDebugInformation: false,
   sessionChecksEnabled: true,
