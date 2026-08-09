@@ -1,5 +1,8 @@
 package de.thm.mni.backend.storage
 
+import de.thm.mni.backend.attachment.AttachmentRepository
+import de.thm.mni.backend.error.ResourceNotFoundException
+import de.thm.mni.backend.mail.MailAccessService
 import de.thm.mni.backend.openapi.BearerAuthenticated
 import de.thm.mni.backend.openapi.DefaultApiErrors
 import de.thm.mni.backend.openapi.BadGatewayApiResponse
@@ -10,11 +13,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.core.io.Resource
 import org.springframework.http.MediaType
+import org.springframework.http.ContentDisposition
+import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.jwt.Jwt
 
 
 /**
@@ -25,7 +32,11 @@ import org.springframework.web.bind.annotation.RestController
 @DefaultApiErrors
 @RestController
 @RequestMapping("/api/images")
-class StorageController(private val fileStorageService: FileStorageService) {
+class StorageController(
+    private val fileStorageService: FileStorageService,
+    private val attachmentRepository: AttachmentRepository,
+    private val mailAccessService: MailAccessService
+) {
     /**
      * Loads a stored resource by object key and returns it with stored media metadata.
      */
@@ -40,15 +51,28 @@ class StorageController(private val fileStorageService: FileStorageService) {
     @BadGatewayApiResponse
     fun getImage(
         @Parameter(description = "Storage object key from an attachment's `path` property.")
-        @PathVariable objectKey: String
+        @PathVariable objectKey: String,
+        @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Resource> {
-        val storedObject = fileStorageService.load(objectKey)
-        val contentType = storedObject.contentType
-            ?.takeIf { value -> value.isNotBlank() }
-            ?.let { value -> MediaType.parseMediaType(value) }
-            ?: MediaType.APPLICATION_OCTET_STREAM
+        val attachment = attachmentRepository.findByPath(objectKey)
+            ?: throw ResourceNotFoundException("Attachment not found")
+        val mail = attachment.mail ?: throw ResourceNotFoundException("Attachment not found")
+        val user = mailAccessService.authenticatedUser(jwt)
+        mailAccessService.ensureMailVisible(mail, user)
 
-        val response = ResponseEntity.ok().contentType(contentType)
+        val storedObject = fileStorageService.load(objectKey)
+        val safeContentType = AttachmentContentTypes.safeResponseType(attachment.mimeType)
+        val contentType = MediaType.parseMediaType(safeContentType)
+        val disposition = if (AttachmentContentTypes.isPreviewable(safeContentType)) {
+            ContentDisposition.inline()
+        } else {
+            ContentDisposition.attachment()
+        }.filename(attachment.fileName ?: "attachment").build()
+
+        val response = ResponseEntity.ok()
+            .contentType(contentType)
+            .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+            .header("X-Content-Type-Options", "nosniff")
         val contentLength = storedObject.contentLength
 
         return if (contentLength != null) {
