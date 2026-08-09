@@ -44,7 +44,7 @@ class StorageController(
     @ApiResponse(responseCode = "200", description = "Attachment returned successfully.")
     @NotFoundApiResponse
     @BadGatewayApiResponse
-    fun getImage(
+    fun downloadAttachment(
         @Parameter(description = "Storage object key from an attachment's `path` property.")
         @PathVariable objectKey: String,
         @AuthenticationPrincipal jwt: Jwt
