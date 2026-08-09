@@ -9,7 +9,6 @@ import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
 import de.thm.mni.backend.mail.external.SupportReplyService
 import de.thm.mni.backend.mailrecord.MailRecordService
-import de.thm.mni.backend.smtp.SMTPService
 import de.thm.mni.backend.ticket.SupportTicketLifecycleService
 import de.thm.mni.backend.user.User
 import jakarta.transaction.Transactional
@@ -23,7 +22,7 @@ import java.util.UUID
 @Service
 class MailService(
     private val mailRepository: MailRepository,
-    private val smtpService: SMTPService,
+    private val mailSender: MailSender,
     private val mailRecordService: MailRecordService,
     private val mailRecipientValidator: MailRecipientValidator,
     private val mailAttachmentHandler: MailAttachmentHandler,
@@ -53,7 +52,7 @@ class MailService(
 
         if (mail.deliveryMode == MailDeliveryMode.EXTERNAL) {
             supportReplyService.enforceTicketSubject(mail)
-            if (!smtpService.sendEmail(mail)) {
+            if (!mailSender.send(mail)) {
                 throw MailSendFailedException("Mail could not be sent. The draft was kept for retry.")
             }
         }
