@@ -1,4 +1,4 @@
-package de.thm.mni.backend.mail
+package de.thm.mni.backend.mail.validation
 
 import de.thm.mni.backend.error.InvalidMailRequestException
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
