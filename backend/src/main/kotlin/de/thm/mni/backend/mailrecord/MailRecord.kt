@@ -37,6 +37,7 @@ class MailRecord {
     /** Timestamp at which this recipient opened the internal message. */
     @Column(name = "read_at")
     var readAt: LocalDateTime? = null
+        private set
 
     constructor()
 
@@ -45,5 +46,11 @@ class MailRecord {
         this.user = user
         this.type = type
         id = MailRecordId(mail.id!!, user.id!!)
+    }
+
+    fun markAsRead() {
+        if (readAt == null) {
+            readAt = LocalDateTime.now()
+        }
     }
 }

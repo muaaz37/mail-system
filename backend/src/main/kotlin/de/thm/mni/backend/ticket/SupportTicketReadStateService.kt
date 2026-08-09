@@ -31,7 +31,7 @@ class SupportTicketReadStateService(
                 this.user = user
             }
 
-        readState.readAt = LocalDateTime.now()
+        readState.markAsRead()
         readStateRepository.save(readState)
     }
 }

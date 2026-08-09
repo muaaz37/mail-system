@@ -10,7 +10,6 @@ import de.thm.mni.backend.user.UserService
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
 import java.util.UUID
-import java.time.LocalDateTime
 
 /**
  * Manages recipient records for internal mails.
@@ -67,7 +66,7 @@ class MailRecordService(
             .filter { record -> record.user?.id == userId && record.type != MailType.REPLY_TO }
             .filter { record -> record.readAt == null }
             .forEach { record ->
-                record.readAt = LocalDateTime.now()
+                record.markAsRead()
                 repository.save(record)
             }
     }
