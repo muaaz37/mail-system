@@ -12,6 +12,10 @@ COMMAND=(
   # Enable inline packet processing.
   "-Q"
 
+  # Bind Snort explicitly to the NFQUEUE used by the iptables FORWARD rule.
+  "--daq" "nfq"
+  "--daq-var" "queue=1"
+
   # Load the Snort configuration.
   "-c" "/etc/snort/snort.lua"
 
