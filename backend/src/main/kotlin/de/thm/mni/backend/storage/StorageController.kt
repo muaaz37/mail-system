@@ -1,8 +1,5 @@
 package de.thm.mni.backend.storage
 
-import de.thm.mni.backend.attachment.AttachmentRepository
-import de.thm.mni.backend.error.ResourceNotFoundException
-import de.thm.mni.backend.mail.MailAccessService
 import de.thm.mni.backend.openapi.BearerAuthenticated
 import de.thm.mni.backend.openapi.DefaultApiErrors
 import de.thm.mni.backend.openapi.BadGatewayApiResponse
@@ -33,9 +30,7 @@ import org.springframework.security.oauth2.jwt.Jwt
 @RestController
 @RequestMapping("/api/images")
 class StorageController(
-    private val fileStorageService: FileStorageService,
-    private val attachmentRepository: AttachmentRepository,
-    private val mailAccessService: MailAccessService
+    private val attachmentDownloadService: AttachmentDownloadService
 ) {
     /**
      * Loads a stored resource by object key and returns it with stored media metadata.
@@ -54,13 +49,9 @@ class StorageController(
         @PathVariable objectKey: String,
         @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Resource> {
-        val attachment = attachmentRepository.findByPath(objectKey)
-            ?: throw ResourceNotFoundException("Attachment not found")
-        val mail = attachment.mail ?: throw ResourceNotFoundException("Attachment not found")
-        val user = mailAccessService.authenticatedUser(jwt)
-        mailAccessService.ensureMailVisible(mail, user)
-
-        val storedObject = fileStorageService.load(objectKey)
+        val authorizedAttachment = attachmentDownloadService.loadAuthorized(objectKey, jwt)
+        val attachment = authorizedAttachment.attachment
+        val storedObject = authorizedAttachment.storedObject
         val safeContentType = AttachmentContentTypes.safeResponseType(attachment.mimeType)
         val contentType = MediaType.parseMediaType(safeContentType)
         val disposition = if (AttachmentContentTypes.isPreviewable(safeContentType)) {
