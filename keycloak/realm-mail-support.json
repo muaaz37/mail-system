@@ -52,7 +52,7 @@
         {
           "type": "password",
           "value": "123456",
-          "temporary": false
+          "temporary": true
         }
       ]
     },
@@ -67,7 +67,7 @@
         {
           "type": "password",
           "value": "123456",
-          "temporary": false
+          "temporary": true
         }
       ]
     },
@@ -82,7 +82,7 @@
         {
           "type": "password",
           "value": "123456",
-          "temporary": false
+          "temporary": true
         }
       ]
     },
@@ -97,7 +97,7 @@
         {
           "type": "password",
           "value": "123456",
-          "temporary": false
+          "temporary": true
         }
       ]
     },
@@ -112,7 +112,7 @@
         {
           "type": "password",
           "value": "123456",
-          "temporary": false
+          "temporary": true
         }
       ]
     }
