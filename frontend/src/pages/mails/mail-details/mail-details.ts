@@ -1,26 +1,25 @@
 import { CommonModule, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, Input, OnInit, signal } from '@angular/core';
-import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { DividerModule } from 'primeng/divider';
-import { ImageModule } from 'primeng/image';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
 import { Toast } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { AuthService } from '../../../services/auth/auth-service';
 import { MailsService } from '../../../services/mails/mails-service';
-import { Attachment } from '../../../types/attachment';
 import { Mail, MailDeliveryMode, MailStatus } from '../../../types/mails';
 import { SupportTicketStatus } from '../../../types/tickets';
 import { User } from '../../../types/user';
 import { readApiErrorMessage } from '../../../utils/api-error-message';
 import { getSeverityBadge, getSourceBadge } from '../../../utils/badges';
 import { getMailSenderDisplay } from '../../../utils/mail-senders';
+import { MailAttachmentList } from './attachments/mail-attachment-list';
+import { MailConversation } from './conversation/mail-conversation';
 
 @Component({
   selector: 'app-mail-details',
@@ -34,7 +33,8 @@ import { getMailSenderDisplay } from '../../../utils/mail-senders';
     ProgressSpinnerModule,
     TooltipModule,
     ButtonModule,
-    ImageModule,
+    MailAttachmentList,
+    MailConversation,
   ],
   templateUrl: './mail-details.html',
   styleUrl: './mail-details.css',
@@ -47,12 +47,9 @@ export class MailDetails implements OnInit {
   private messageService = inject(MessageService);
   private router = inject(Router);
   private location = inject(Location);
-  private sanitizer = inject(DomSanitizer);
 
   protected mail = signal<Mail | null>(null);
   protected isLoading = signal(true);
-  protected conversation = signal<Mail[]>([]);
-  protected isConversationLoading = signal(false);
   protected isConversationVisible = signal(false);
 
   /**
@@ -121,31 +118,16 @@ export class MailDetails implements OnInit {
     return mail?.deliveryMode === MailDeliveryMode.INTERNAL && mail.status === MailStatus.SENT;
   }
 
-  /** Loads the internal conversation once and toggles its visibility. */
+  /** Toggles the internal conversation section. */
   toggleConversation(): void {
-    const mail = this.mail();
-    if (!mail || !this.canViewConversation()) return;
-
-    if (this.isConversationVisible()) {
-      this.isConversationVisible.set(false);
-      return;
+    if (this.canViewConversation()) {
+      this.isConversationVisible.update((visible) => !visible);
     }
+  }
 
-    this.isConversationVisible.set(true);
-    if (this.conversation().length || this.isConversationLoading()) return;
-
-    this.isConversationLoading.set(true);
-    this.mailsService.getInternalConversation(mail.id).subscribe({
-      next: (conversation) => {
-        this.conversation.set(conversation);
-        this.isConversationLoading.set(false);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.isConversationVisible.set(false);
-        this.isConversationLoading.set(false);
-        this.showError('Failed to Load Conversation', err);
-      },
-    });
+  protected handleConversationError(error: HttpErrorResponse): void {
+    this.isConversationVisible.set(false);
+    this.showError('Failed to Load Conversation', error);
   }
 
   /**
@@ -155,11 +137,9 @@ export class MailDetails implements OnInit {
    */
   private loadMail(id: string): void {
     this.isLoading.set(true);
-    this.conversation.set([]);
     this.isConversationVisible.set(false);
     this.mailsService.getMailById(id).subscribe({
       next: (mail) => {
-        mail.attachments.forEach((attachment) => this.loadAttachmentPreview(attachment));
         this.mail.set(mail);
         this.isLoading.set(false);
       },
@@ -167,18 +147,6 @@ export class MailDetails implements OnInit {
         this.showError('Failed to Load Mail', err);
         this.isLoading.set(false);
       },
-    });
-  }
-
-  /**
-   * Loads one attachment blob and stores a safe object URL on the attachment model.
-   *
-   * @param attachment Attachment metadata that should receive preview data.
-   */
-  private loadAttachmentPreview(attachment: Attachment): void {
-    this.mailsService.fetchAttachment(attachment.path).subscribe({
-      next: (blob) => this.assignAttachmentBlob(attachment, blob),
-      error: (err: HttpErrorResponse) => this.showError('Failed to Load Attachment', err),
     });
   }
 
@@ -277,29 +245,6 @@ export class MailDetails implements OnInit {
   }
 
   /**
-   * Checks whether an attachment can be displayed as an image.
-   *
-   * @param attachment Attachment metadata returned by the backend.
-   * @returns True when the MIME type starts with image/.
-   */
-  isImageAttachment(attachment: Attachment): boolean {
-    return attachment.mimeType?.startsWith('image/') ?? false;
-  }
-
-  /**
-   * Checks whether an attachment is a PDF document.
-   *
-   * @param attachment Attachment metadata returned by the backend.
-   * @returns True when MIME type or filename indicates a PDF.
-   */
-  isPdfAttachment(attachment: Attachment): boolean {
-    return (
-      attachment.mimeType === 'application/pdf' ||
-      attachment.fileName?.toLowerCase().endsWith('.pdf')
-    );
-  }
-
-  /**
    * Opens the draft edit page for the displayed mail.
    */
   editMail(): void {
@@ -347,39 +292,6 @@ export class MailDetails implements OnInit {
         error: (err: HttpErrorResponse) => this.showError('Failed to Delete Mail', err),
       });
     }
-  }
-
-  /**
-   * Opens an attachment in a new browser tab after ensuring that a blob URL exists.
-   *
-   * @param attachment Attachment selected by the user.
-   */
-  openAttachment(attachment: Attachment): void {
-    if (attachment.url) {
-      window.open(attachment.url);
-      return;
-    }
-
-    this.mailsService.fetchAttachment(attachment.path).subscribe({
-      next: (blob) => {
-        this.assignAttachmentBlob(attachment, blob);
-        window.open(attachment.url);
-      },
-      error: (err: HttpErrorResponse) => this.showError('Failed to Open Attachment', err),
-    });
-  }
-
-  /**
-   * Stores browser object URLs used for previews and opening downloaded attachments.
-   *
-   * @param attachment Attachment model that should receive the blob state.
-   * @param blob Binary attachment response returned by the backend.
-   */
-  private assignAttachmentBlob(attachment: Attachment, blob: Blob): void {
-    const url = URL.createObjectURL(blob);
-    attachment.url = url;
-    attachment.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
-    attachment.blob = blob;
   }
 
   /**
