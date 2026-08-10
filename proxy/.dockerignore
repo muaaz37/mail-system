@@ -1,0 +1,7 @@
+cert/*.crt
+cert/*.key
+cert/*.pem
+cert/*.csr
+*.log
+*.tmp
+.DS_Store

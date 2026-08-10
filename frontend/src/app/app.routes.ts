@@ -12,8 +12,17 @@ import { NoFound } from '../pages/no-found/no-found';
 import { TicketsPage } from '../pages/tickets/tickets-page/tickets-page';
 import { TicketDetails } from '../pages/tickets/ticket-details/ticket-details';
 
+/**
+ * Matches UUID route segments used by mail and ticket detail routes.
+ */
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/**
+ * Creates a matcher for routes that consist only of one UUID segment.
+ *
+ * @param paramName Name under which the UUID segment is exposed to the component.
+ * @returns Angular route matcher for a single UUID path.
+ */
 function uuidRoute(paramName: string): UrlMatcher {
   return (segments: UrlSegment[]): UrlMatchResult | null => {
     if (segments.length === 1 && uuidPattern.test(segments[0].path)) {
@@ -24,6 +33,13 @@ function uuidRoute(paramName: string): UrlMatcher {
   };
 }
 
+/**
+ * Creates a matcher for UUID routes followed by a fixed action suffix such as `reply` or `edit`.
+ *
+ * @param paramName Name under which the UUID segment is exposed to the component.
+ * @param suffix Required second route segment.
+ * @returns Angular route matcher for UUID action paths.
+ */
 function uuidWithSuffixRoute(paramName: string, suffix: string): UrlMatcher {
   return (segments: UrlSegment[]): UrlMatchResult | null => {
     if (segments.length === 2 && uuidPattern.test(segments[0].path) && segments[1].path === suffix) {
@@ -34,6 +50,13 @@ function uuidWithSuffixRoute(paramName: string, suffix: string): UrlMatcher {
   };
 }
 
+/**
+ * Creates a matcher for prefixed UUID routes such as ticket detail URLs.
+ *
+ * @param prefix Required first route segment.
+ * @param paramName Name under which the UUID segment is exposed to the component.
+ * @returns Angular route matcher for prefixed UUID paths.
+ */
 function prefixWithUuidRoute(prefix: string, paramName: string): UrlMatcher {
   return (segments: UrlSegment[]): UrlMatchResult | null => {
     if (segments.length === 2 && segments[0].path === prefix && uuidPattern.test(segments[1].path)) {
@@ -44,6 +67,9 @@ function prefixWithUuidRoute(prefix: string, paramName: string): UrlMatcher {
   };
 }
 
+/**
+ * Application routes for public login, authenticated mail workspace and fallback pages.
+ */
 export const routes: Routes = [
   { path: 'login', component: LoginPage },
   { path: '', redirectTo: '/mails', pathMatch: 'full' },

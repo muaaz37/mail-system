@@ -37,7 +37,11 @@ frontend/.git.backup/
 uploads/
 
 # Local project notes / non-submission artifacts
-docs/
+# Keep internal reviews, PDFs and notes local. Only submission architecture diagrams are versioned.
+docs/*
+!docs/infrastructure/
+!docs/infrastructure/**
+docs/infrastructure/.DS_Store
 loesung.md
 
 # Logs and temporary files

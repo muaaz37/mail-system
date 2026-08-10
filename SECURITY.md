@@ -43,7 +43,7 @@ Security-relevant areas include:
 
 - Authentication and JWT handling
 - REST API access through `/api`
-- Docker and Caddy exposure
+- Docker edge gateway, WAF and reverse-proxy exposure
 - PostgreSQL configuration
 - SMTP/IMAP mailbox access
 - SeaweedFS/S3 attachment storage

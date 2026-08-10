@@ -7,8 +7,14 @@ import org.springframework.security.core.AuthenticationException
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.stereotype.Component
 
+/**
+ * Converts Spring Security authentication failures into the public JSON error contract.
+ */
 @Component
 class AuthErrorHandler : AuthenticationEntryPoint {
+    /**
+     * Sends a sanitized 401 response instead of exposing framework-specific authentication errors.
+     */
     override fun commence(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -19,6 +25,9 @@ class AuthErrorHandler : AuthenticationEntryPoint {
         response.writer.write(UNAUTHORIZED_RESPONSE_BODY)
     }
 
+    /**
+     * Shared response body for unauthenticated API calls.
+     */
     private companion object {
         const val UNAUTHORIZED_RESPONSE_BODY = """{"status":401,"message":"Authentication required. Please log in."}"""
     }

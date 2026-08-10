@@ -7,14 +7,14 @@
 Mail Support System is a full-stack web application for a shared support mailbox with ticket-based mail handling.
 Authenticated support users can work on shared incoming support requests, create and send replies through the configured support mailbox, manage drafts and attachments, and use internal application mail where needed.
 
-The repository contains an Angular frontend, a Kotlin/Spring Boot backend, a Caddy static web server, an HAProxy/ModSecurity edge gateway, PostgreSQL, SeaweedFS/S3-compatible attachment storage and a local Keycloak OpenID Connect setup for Docker Compose based evaluation.
+The repository contains an Angular frontend, a Kotlin/Spring Boot backend, a Caddy static web server, a Snort inline IPS, a ModSecurity/Nginx WAF reverse proxy, PostgreSQL, SeaweedFS/S3-compatible attachment storage and a local Keycloak OpenID Connect setup for Docker Compose based evaluation.
 
 == System Overview
 
 The system is designed as a split frontend/backend application with externalized identity, mail and attachment storage concerns:
 
 * Angular single-page application served by Caddy under `/app/`.
-* HAProxy and ModSecurity/Nginx edge gateway that exposes the public HTTP/HTTPS ports and forwards `/api/*` requests to the backend service.
+* Snort inline IPS in front of a ModSecurity/Nginx WAF reverse proxy that exposes the public HTTP/HTTPS ports and forwards `/api/*` requests to the backend service.
 * Kotlin/Spring Boot REST API for users, mails, tickets, attachments, SMTP sending and IMAP import.
 * PostgreSQL application database for users, mails, ticket state and attachment metadata.
 * SeaweedFS/S3-compatible object storage for uploaded and imported attachment binaries.
@@ -59,7 +59,7 @@ The system is designed as a split frontend/backend application with externalized
 | The backend exposes a generated OpenAPI document and Swagger UI through the HTTPS edge gateway under `/api`. Protected operations document JWT bearer authentication.
 
 | Local container runtime
-| Docker Compose starts the HAProxy/ModSecurity edge, frontend/Caddy, backend, PostgreSQL, SeaweedFS, Keycloak and the Keycloak database with persistent Docker volumes for application, object-storage and identity-provider state.
+| Docker Compose starts the Snort IPS, ModSecurity/Nginx WAF reverse proxy, frontend/Caddy, backend, PostgreSQL, SeaweedFS, Keycloak and the Keycloak database with persistent Docker volumes for application, object-storage and identity-provider state.
 |===
 
 == Scope
@@ -68,12 +68,73 @@ The project implements a mail support workflow around a shared support mailbox. 
 
 The Docker Compose setup is intended for local evaluation and development. A public production deployment should provide production-grade secret management, TLS termination, stable public hostnames and operational monitoring.
 
+== Implemented Corrections and Quality Improvements
+
+The current implementation addresses the following functional, architectural and deployment concerns:
+
+[cols="1,3",options="header"]
+|===
+| Area | Implemented correction
+
+| Authentication
+| Local password storage and application-owned login endpoints were removed. Authentication is delegated to Keycloak through OpenID Connect, and the backend validates bearer tokens as a stateless OAuth2 Resource Server.
+
+| Authorization
+| Protected API endpoints require authentication. Mail and attachment access is checked against the authenticated user's visibility rules before data or binary content is returned.
+
+| Error handling
+| Backend errors are mapped through a central error contract. Authentication failures, invalid requests, oversized uploads, unsupported attachment formats and storage failures return controlled responses instead of framework stack traces.
+
+| API exposure
+| In Docker Compose, the backend is not published directly to the host. Browser and API traffic goes through the IPS/WAF edge path and the reverse proxy under `/api`.
+
+| Frontend routing
+| The Angular application is served under `/app/`; direct refresh and deep links are handled by the Caddy SPA fallback.
+
+| Support mailbox model
+| The mail workflow uses a shared support mailbox for external communication instead of assuming that every application user has a personal SMTP/IMAP account.
+
+| Ticket tracking
+| Imported external mails are grouped into support tickets. Replies preserve a single ticket code in the subject, and follow-up mails can be associated with the existing ticket.
+
+| Mail import
+| IMAP polling imports unread support mailbox messages, skips already known message IDs, stores imported mails and attachments, and marks successfully handled messages as read.
+
+| Attachment storage
+| Persistent attachment binaries are stored outside the backend filesystem in SeaweedFS through the S3-compatible API. PostgreSQL stores attachment metadata and object keys.
+
+| Code structure
+| Mail sending, reply handling, attachment access, ticket lifecycle, user profile lookup and storage access are separated into dedicated services and interfaces.
+
+| Build and quality checks
+| The repository provides Gradle tasks for backend and frontend build orchestration, Kotlin static analysis with detekt, Angular linting with ESLint and automated tests.
+|===
+
 == Architecture
 
 The preferred architecture documentation uses a logical C4 model. The Mail Support System boundary contains the application-owned runtime parts. Identity and mailbox systems stay outside the boundary because they are external services used by the application.
 
-// Insert the exported system architecture image here when it is part of the submitted repository.
-// Example: image::architecture/system-architecture.png[System architecture]
+The following C4 diagrams describe the system context, runtime containers and backend components of the Mail Support System.
+
+=== C4 Level 1 - System Context
+
+Level 1 shows the Mail Support System as one software system, its user roles and the external systems it depends on.
+
+image::docs/infrastructure/LvL1.png[C4 Level 1 - System Context,align="center"]
+
+=== C4 Level 2 - Container View
+
+Level 2 decomposes the Mail Support System into deployable and persistent runtime containers. Keycloak and the support mail server are shown outside the system boundary because they provide identity and mailbox services to the application.
+
+image::docs/infrastructure/LvL2.png[C4 Level 2 - Container View,align="center"]
+
+=== C4 Level 3 - Backend Components
+
+Level 3 zooms into the Backend API container and shows the main business-oriented backend components and their relationships to external containers and systems.
+
+image::docs/infrastructure/LvL3.png[C4 Level 3 - Backend Components,align="center"]
+
+The tables below summarize the same architecture in text form for accessible review and quick verification.
 
 === Logical System Boundary
 
@@ -85,8 +146,12 @@ The preferred architecture documentation uses a logical C4 model. The Mail Suppo
 | Serves the Angular UI under `/app/`, manages browser routes and sends authenticated API calls through `/api`.
 | Inside Mail Support System
 
-| Edge Gateway
-| Exposes the public HTTP/HTTPS ports, redirects HTTP to HTTPS, applies ModSecurity rules and forwards `/app`, `/api` and Keycloak paths to internal services.
+| Network IPS
+| Exposes the public HTTP/HTTPS ports, forwards traffic to the WAF reverse proxy and applies Snort inline packet inspection before traffic reaches the application layer.
+| Inside Mail Support System
+
+| WAF Reverse Proxy
+| Terminates TLS, redirects HTTP to HTTPS, applies ModSecurity inspection to API traffic and forwards `/app`, `/api` and Keycloak paths to internal services.
 | Inside Mail Support System
 
 | Backend API
@@ -117,15 +182,19 @@ The preferred architecture documentation uses a logical C4 model. The Mail Suppo
 | Container | Technology | Interfaces
 
 | Support Web Application
-| Angular 21, TypeScript, PrimeNG, Tailwind CSS, Caddy 2
+| Angular 21.2.18, TypeScript 5.9.3, PrimeNG 21.1.1, Tailwind CSS 4.1.18, Caddy 2.6.4
 | Internal web endpoint for `/app/`; browser redirects to Keycloak through the public edge gateway.
 
-| Edge Gateway
-| HAProxy and ModSecurity/Nginx
-| Public HTTP/HTTPS entry point; forwards `/app/` to Caddy, `/api/*` to the backend and `/realms/*`, `/resources/*`, `/admin/*` to Keycloak.
+| Network IPS
+| Snort 3 with NFQUEUE and iptables
+| Public HTTP/HTTPS entry point; forwards inspected traffic to the WAF reverse proxy.
+
+| WAF Reverse Proxy
+| OWASP ModSecurity CRS 4.25 with Nginx
+| Internal HTTP/HTTPS proxy endpoint; redirects HTTP to HTTPS, applies ModSecurity inspection to `/api/` traffic, forwards `/app/` to Caddy and forwards Keycloak paths to the Keycloak service.
 
 | Backend API
-| Kotlin 2.3, Java 21, Spring Boot 4.1, Spring Security OAuth2 Resource Server, Spring Data JPA, Spring Mail, AWS SDK S3
+| Kotlin 2.3.21, Java 21, Spring Boot 4.1.0, Spring Security OAuth2 Resource Server, Spring Data JPA, Spring Mail, AWS SDK S3 2.25.60
 | HTTP REST API under `/api/*`; JDBC to PostgreSQL; S3-compatible HTTP to SeaweedFS; SMTP/IMAP to the support mail server; OIDC JWK lookup to Keycloak.
 
 | Application Database
@@ -137,7 +206,7 @@ The preferred architecture documentation uses a logical C4 model. The Mail Suppo
 | Internal S3-compatible endpoint consumed by the Backend API.
 
 | Identity Provider
-| Keycloak 26 with OpenID Connect
+| Keycloak 26.6.3 with OpenID Connect
 | Browser login, OIDC discovery and JWK Set endpoints.
 
 | Support Mail Server
@@ -198,9 +267,11 @@ mail-system/
 |   |-- Caddyfile             production static web server and SPA route fallback
 |   `-- Dockerfile            frontend build and Caddy image
 |
-|-- ips/                     HAProxy public edge and rate-limiting entry point
+|-- ips/                     Snort inline IPS and packet-forwarding entry point
 |-- keycloak/                local Keycloak Docker image and realm import
 |-- proxy/                   ModSecurity/Nginx WAF and reverse proxy
+|-- scripts/                 local operational helper scripts
+|-- docs/infrastructure/     C4 architecture diagrams embedded in this README
 |-- docker-compose.yml       local container orchestration
 |-- build.gradle.kts         root Gradle orchestration
 |-- settings.gradle.kts      Gradle module declaration
@@ -216,31 +287,31 @@ mail-system/
 | Layer | Technology
 
 | Frontend
-| Angular 21, TypeScript, PrimeNG, PrimeIcons, Tailwind CSS, angular-oauth2-oidc
+| Angular 21.2.18, TypeScript 5.9.3, PrimeNG 21.1.1, PrimeIcons 7.0.0, Tailwind CSS 4.1.18, angular-oauth2-oidc 21.0.3
 
 | Backend
-| Kotlin 2.3, Java 21, Spring Boot 4.1, Spring Security OAuth2 Resource Server, Spring Data JPA, Spring Validation, SpringDoc OpenAPI
+| Kotlin 2.3.21, Java 21, Spring Boot 4.1.0, Spring Security 7.1.0 OAuth2 Resource Server, Spring Data JPA, Spring Validation, SpringDoc OpenAPI 3.0.3, AWS SDK S3 2.25.60
 
 | Identity provider
-| Keycloak 26 with OpenID Connect
+| Keycloak 26.6.3 with OpenID Connect
 
 | Persistence
-| PostgreSQL for Docker Compose, H2 as direct-start fallback
+| PostgreSQL 16 for Docker Compose, H2 2.4.240 as direct-start fallback
 
 | Attachment storage
-| SeaweedFS 4.38 through the S3-compatible API, AWS SDK S3 client in the backend
+| SeaweedFS 4.38 through the S3-compatible API, AWS SDK S3 2.25.60 client in the backend
 
 | Mail
-| Spring Boot Mail, JavaMail, Spring Integration Mail, SMTP, IMAP
+| Spring Boot Mail 4.1.0, JavaMail, Spring Integration Mail 7.1.0, SMTP, IMAP
 
 | Build
-| Gradle Kotlin DSL, Gradle wrapper 9.6.1, Node Gradle plugin, Node.js 24.12.0, npm 11.6.2
+| Gradle Kotlin DSL, Gradle wrapper 9.6.1, Node Gradle plugin 7.1.0, Node.js 24.12.0, npm 11.6.2
 
 | Runtime
-| Docker Compose, HAProxy, ModSecurity/Nginx, Caddy, Keycloak, Eclipse Temurin Java runtime
+| Docker Compose, Snort 3, iptables/NFQUEUE, OWASP ModSecurity CRS 4.25 with Nginx, Caddy 2.6.4, Keycloak 26.6.3, Eclipse Temurin Java 21 runtime
 
 | Quality
-| detekt for Kotlin and angular-eslint for Angular/TypeScript
+| detekt 2.0.0-alpha.3 for Kotlin, ESLint 10.3.0 and angular-eslint 21.3.1 for Angular/TypeScript
 |===
 
 == Prerequisites
@@ -254,6 +325,29 @@ Install the following tools for local operation and development:
 
 The Gradle wrapper downloads the configured Gradle version automatically. The Gradle-driven frontend build downloads the configured Node/npm versions through the Node Gradle plugin.
 Direct backend and frontend dependencies are pinned to fixed versions in their build manifests. Transitive npm packages are resolved through `frontend/package-lock.json`.
+
+== Build Requirements
+
+[cols="1,2,3",options="header"]
+|===
+| Target | Required inputs | Command and result
+
+| Production-style container build
+| Docker, Docker Compose and a root `.env` created from `.env.example`. The `.env` file must provide database credentials, S3/SeaweedFS credentials, SMTP/IMAP mailbox settings, support-mail address and Keycloak settings.
+| `./gradlew startLocal` creates a local TLS certificate when missing, runs `docker compose up --build`, builds the Angular production bundle, builds the backend runtime image and starts the complete container stack behind the IPS/WAF edge path.
+
+| Direct backend development
+| Java 21. Optional datasource and mail/storage environment variables can be exported from `.env`; otherwise the backend can use its direct-start fallback configuration for local development.
+| `./gradlew :backend:bootRun` starts the Spring Boot API directly on the local development port.
+
+| Direct frontend development
+| Node.js and npm when running the Angular development server directly outside Gradle.
+| `cd frontend && npm ci && npm run start` starts the Angular development server. Requests to `/api/*` are forwarded through `frontend/proxy.conf.json`.
+
+| Verification build
+| Java 21. The Gradle frontend integration downloads the configured Node.js and npm versions automatically.
+| `./gradlew lint build` runs backend detekt, frontend ESLint, frontend production build, backend compilation and automated tests.
+|===
 
 == Configuration
 
@@ -270,7 +364,7 @@ Required values for Docker Compose:
 
 [source,env]
 ----
-# Public edge ports exposed by the HAProxy/IPS gateway
+# Public edge ports exposed by the Snort IPS gateway
 HTTP_HOST_PORT=80
 HTTPS_HOST_PORT=443
 
@@ -331,14 +425,16 @@ SPRING_JPA_HIBERNATE_DDL_AUTO=update
 
 == Run With Docker
 
-The Docker edge proxy expects a local TLS certificate. Generate it once when `proxy/cert/proxy.crt` or `proxy/cert/proxy.key` is missing:
+After `.env` has been created and filled with the required runtime values, build and start the complete stack with one Gradle command:
 
 [source,bash]
 ----
-bash ./proxy/cert/generate-certificate.sh
+./gradlew startLocal
 ----
 
-Build and start the complete stack:
+The Gradle task invokes `scripts/start-local.sh`, creates the local self-signed proxy certificate when it is missing and then runs `docker compose up --build`. This keeps generated certificate files and private keys out of version control.
+
+If the local certificate already exists, the same command reuses it. To start Compose manually, run:
 
 [source,bash]
 ----
@@ -361,15 +457,41 @@ Stop the system:
 
 [source,bash]
 ----
-docker compose down
+./gradlew stopLocal
 ----
 
 Remove containers and persisted Docker volumes:
 
 [source,bash]
 ----
-docker compose down -v
+./gradlew resetLocal
 ----
+
+== Security Architecture
+
+The Docker Compose setup implements the required security layers for local evaluation:
+
+[cols="1,3",options="header"]
+|===
+| Requirement | Implementation
+
+| Container hardening
+| Services drop Linux capabilities by default and run with `no-new-privileges`. Containers that support it use a read-only root filesystem and writable `tmpfs` mounts for runtime directories. The IPS service receives only the additional capabilities required for packet forwarding, iptables and Snort NFQUEUE processing.
+
+| Network separation
+| Compose uses dedicated networks between the IPS and WAF, WAF and frontend, WAF and backend, WAF and Keycloak, backend and PostgreSQL, backend and SeaweedFS, backend and Keycloak, and Keycloak and its database. Internal application networks are marked as Docker-internal where external access is not required.
+
+| Reverse proxy WAF
+| All browser traffic enters through the Snort IPS and then the ModSecurity/Nginx reverse proxy. API traffic under `/api/` is inspected by ModSecurity before it reaches the backend. The backend, frontend, databases, Keycloak and SeaweedFS are not published directly to the host.
+
+| TLS
+| The WAF reverse proxy uses certificate files mounted as Docker secrets from `proxy/cert/`. HTTP requests are redirected to HTTPS. The local start script creates a self-signed certificate automatically when it is missing.
+
+| NIPS
+| The `ips` service runs Snort in inline IPS mode with NFQUEUE. It applies Snort community rules and local rules on the edge network path before traffic reaches the WAF. Payload-based HTTP rules apply to unencrypted HTTP traffic; HTTPS payload inspection is handled by ModSecurity after TLS termination.
+|===
+
+Snort runs in front of TLS termination and protects the lower network path before the WAF. ModSecurity inspects decrypted API HTTP traffic at the application layer after TLS termination.
 
 == Run For Development
 
@@ -418,6 +540,25 @@ Create installable distributions:
 ./gradlew installDist
 ----
 
+The generated runtime artifacts are self-contained for their container runtime use:
+
+[cols="1,2,3",options="header"]
+|===
+| Artifact | Location | Contents
+
+| Backend distribution
+| `backend/build/install/backend/` and `build/install/mail-system/backend/`
+| Application start scripts under `bin/` plus all runtime dependency JARs under `lib/`. The backend container copies this distribution into `/app` and runs `/app/bin/backend` on a Java 21 runtime image.
+
+| Frontend distribution
+| `frontend/build/angular/browser/`, `frontend/build/install/frontend/` and `build/install/mail-system/frontend/`
+| Compiled Angular HTML, JavaScript, CSS and static assets. The frontend container copies the browser bundle into Caddy's `/srv` webroot; no Angular development server or `node_modules` directory is required at runtime.
+
+| Container images
+| Built by `docker compose build` or through `./gradlew startLocal`
+| Multi-stage Docker builds create runtime images from the generated backend and frontend artifacts, while PostgreSQL, SeaweedFS, Keycloak, WAF and IPS dependencies are provided as Compose services.
+|===
+
 Run the configured checks:
 
 [source,bash]
@@ -431,6 +572,28 @@ Run the combined static-code-quality task:
 ----
 ./gradlew lint
 ----
+
+The lint setup is configured for both application layers:
+
+[cols="1,2,2,2",options="header"]
+|===
+| Layer | Tooling | Configuration | Command
+
+| Backend
+| detekt 2.0.0-alpha.3
+| `backend/build.gradle.kts`
+| `./gradlew :backend:detekt`
+
+| Frontend
+| ESLint 10.3.0 with angular-eslint 21.3.1
+| `frontend/eslint.config.js` and `frontend/angular.json`
+| `./gradlew :frontend:lintFrontend` or `cd frontend && npm run lint`
+
+| Monorepo
+| Root Gradle orchestration
+| `build.gradle.kts`
+| `./gradlew lint`
+|===
 
 Useful module-specific commands:
 
@@ -503,7 +666,7 @@ Rebuild the Docker image from the repository root. The backend Dockerfile runs t
 
 [source,bash]
 ----
-docker compose up --build
+./gradlew startLocal
 ----
 
 === Frontend cannot reach the API during development
@@ -520,7 +683,7 @@ Remove Docker volumes:
 
 [source,bash]
 ----
-docker compose down -v
+./gradlew resetLocal
 ----
 
 == License

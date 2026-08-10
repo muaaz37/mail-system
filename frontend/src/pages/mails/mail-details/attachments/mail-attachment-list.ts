@@ -30,14 +30,14 @@ export class MailAttachmentList implements OnChanges {
 
   protected openAttachment(attachment: Attachment): void {
     if (attachment.url) {
-      window.open(attachment.url);
+      window.open(attachment.url, '_blank', 'noopener,noreferrer');
       return;
     }
 
     this.mailsService.fetchAttachment(attachment.path).subscribe({
       next: (blob) => {
         this.assignBlob(attachment, blob);
-        window.open(attachment.url);
+        window.open(attachment.url, '_blank', 'noopener,noreferrer');
       },
       error: (error: HttpErrorResponse) => this.showError('Failed to Open Attachment', error),
     });

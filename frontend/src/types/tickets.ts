@@ -1,6 +1,9 @@
 import type { Mail } from './mails';
 import { User } from './user';
 
+/**
+ * Workflow states used by the shared support ticket queues.
+ */
 export enum SupportTicketStatus {
   OPEN = 'OPEN',
   WAITING_FOR_SUPPORT = 'WAITING_FOR_SUPPORT',
@@ -8,6 +11,9 @@ export enum SupportTicketStatus {
   RESOLVED = 'RESOLVED',
 }
 
+/**
+ * Triage priority assigned by support users.
+ */
 export enum SupportTicketPriority {
   LOW = 'LOW',
   NORMAL = 'NORMAL',
@@ -15,8 +21,14 @@ export enum SupportTicketPriority {
   URGENT = 'URGENT',
 }
 
+/**
+ * Queue filters supported by the ticket overview API.
+ */
 export type TicketView = 'open' | 'waiting' | 'resolved' | 'all';
 
+/**
+ * Ticket summary shown in queue views and returned by ticket commands.
+ */
 export interface SupportTicket {
   id: string;
   ticketNumber: string;
@@ -34,6 +46,9 @@ export interface SupportTicket {
   closedAt?: string | null;
 }
 
+/**
+ * Ticket detail response containing metadata and the complete mail conversation.
+ */
 export interface SupportTicketDetail {
   ticket: SupportTicket;
   mails: Mail[];

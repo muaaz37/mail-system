@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.Exec
+
 plugins {
     distribution
 }
@@ -51,4 +53,22 @@ listOf("installDist", "distZip", "distTar").forEach { taskName ->
         dependsOn(":frontend:$taskName")
         dependsOn(":backend:$taskName")
     }
+}
+
+tasks.register<Exec>("startLocal") {
+    group = "application"
+    description = "Builds and starts the complete local Docker Compose stack."
+    commandLine("bash", "scripts/start-local.sh")
+}
+
+tasks.register<Exec>("stopLocal") {
+    group = "application"
+    description = "Stops the local Docker Compose stack."
+    commandLine("docker", "compose", "down")
+}
+
+tasks.register<Exec>("resetLocal") {
+    group = "application"
+    description = "Stops the local Docker Compose stack and removes persisted Docker volumes."
+    commandLine("docker", "compose", "down", "-v")
 }

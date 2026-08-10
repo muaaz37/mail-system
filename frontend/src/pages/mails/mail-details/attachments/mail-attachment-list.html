@@ -24,6 +24,8 @@
             <iframe
               [src]="attachment.safeUrl"
               title="PDF preview"
+              sandbox=""
+              referrerpolicy="no-referrer"
               class="w-96 h-64 rounded-md border border-gray-300 bg-white mt-2"
             ></iframe>
           } @else {
