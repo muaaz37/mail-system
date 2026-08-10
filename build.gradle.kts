@@ -64,11 +64,11 @@ tasks.register<Exec>("startLocal") {
 tasks.register<Exec>("stopLocal") {
     group = "application"
     description = "Stops the local Docker Compose stack."
-    commandLine("docker", "compose", "down")
+    commandLine("bash", "scripts/docker-compose-local.sh", "down")
 }
 
 tasks.register<Exec>("resetLocal") {
     group = "application"
     description = "Stops the local Docker Compose stack and removes persisted Docker volumes."
-    commandLine("docker", "compose", "down", "-v")
+    commandLine("bash", "scripts/docker-compose-local.sh", "down", "-v")
 }

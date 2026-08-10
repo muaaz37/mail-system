@@ -22,4 +22,4 @@ if [[ ! -f "${CERT_FILE}" || ! -f "${KEY_FILE}" ]]; then
 fi
 
 cd "${ROOT_DIR}"
-docker compose up --build
+bash "${ROOT_DIR}/scripts/docker-compose-local.sh" up --build

@@ -28,6 +28,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -67,6 +68,7 @@ class MailController(
         description = "Returns all draft mails owned by the authenticated user."
     )
     @ApiResponse(responseCode = "200", description = "Draft mails returned successfully.")
+    @Transactional(readOnly = true)
     fun getCreatedMails(@AuthenticationPrincipal jwt: Jwt): List<MailDTO> {
         val user = mailAccessService.authenticatedUser(jwt)
         val userMails = mailQueryService.getAllCreatedUserMails(user)
@@ -83,6 +85,7 @@ class MailController(
         description = "Returns all mails sent by the authenticated user."
     )
     @ApiResponse(responseCode = "200", description = "Sent mails returned successfully.")
+    @Transactional(readOnly = true)
     fun getSentMails(@AuthenticationPrincipal jwt: Jwt): List<MailDTO> {
         val user = mailAccessService.authenticatedUser(jwt)
         val userMails = mailQueryService.getAllSentUserMails(user)
@@ -128,6 +131,7 @@ class MailController(
         description = "Returns internal inbox mails and imported support mails visible to the authenticated user."
     )
     @ApiResponse(responseCode = "200", description = "Incoming mails returned successfully.")
+    @Transactional(readOnly = true)
     fun getIncomingMailsForUser(@AuthenticationPrincipal jwt: Jwt): List<MailDTO> {
         val user = mailAccessService.authenticatedUser(jwt)
         val userMails = mailQueryService.getIncomingMailsForUser(user.id!!)
@@ -145,6 +149,7 @@ class MailController(
     )
     @ApiResponse(responseCode = "200", description = "Reply template returned successfully.")
     @NotFoundApiResponse
+    @Transactional(readOnly = true)
     fun getReplyTemplate(
         @Parameter(description = "Identifier of the mail that should be answered.") @PathVariable mailId: UUID,
         @AuthenticationPrincipal jwt: Jwt
@@ -166,6 +171,7 @@ class MailController(
     )
     @ApiResponse(responseCode = "200", description = "Internal conversation returned successfully.")
     @NotFoundApiResponse
+    @Transactional
     fun getInternalMailConversation(
         @Parameter(description = "Identifier of any mail in the internal conversation.")
         @PathVariable mailId: UUID,
@@ -196,6 +202,7 @@ class MailController(
     )
     @ApiResponse(responseCode = "200", description = "Mail returned successfully.")
     @NotFoundApiResponse
+    @Transactional
     fun getMailById(
         @Parameter(description = "Mail identifier returned by a mail-list operation.") @PathVariable mailId: UUID,
         @AuthenticationPrincipal jwt: Jwt
