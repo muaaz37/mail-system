@@ -62,6 +62,8 @@ The system is designed as a split frontend/backend application with externalized
 | Docker Compose starts the Snort IPS, ModSecurity/Nginx WAF reverse proxy, frontend/Caddy, backend, PostgreSQL, SeaweedFS, Keycloak and the Keycloak database with persistent Docker volumes for application, object-storage and identity-provider state.
 |===
 
+The authentication choice, considered alternatives and implemented OpenID Connect flow are documented in link:docs/architectural-decisions/identity-management.adoc[Identity Management with Keycloak and OpenID Connect].
+
 == Scope
 
 The project implements a mail support workflow around a shared support mailbox. The primary use case is a team of authenticated support users processing external support emails as tickets. Internal application mail remains available as an additional workflow and does not use SMTP.
@@ -313,6 +315,8 @@ mail-system/
 | Quality
 | detekt 2.0.0-alpha.3 for Kotlin, ESLint 10.3.0 and angular-eslint 21.3.1 for Angular/TypeScript
 |===
+
+The fixed-version decision and selected build platform are documented in link:docs/architectural-decisions/dependency-management.adoc[Fixed Build and Dependency Versions].
 
 == Prerequisites
 
