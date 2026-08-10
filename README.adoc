@@ -613,18 +613,18 @@ npm run build
 
 The backend imports local sample profiles from `backend/src/main/resources/data.json` for local evaluation. These records contain no credentials and cannot be used to log in. Authentication identities and credentials belong exclusively to Keycloak.
 
-[cols="1,2,2,3",options="header"]
+[cols="1,2,2,3,2",options="header"]
 |===
-| # | First name | Last name | Email
+| # | First name | Last name | Username | Initial password
 
-| 1 | Ameline | Allanson | `aallanson@example.com`
-| 2 | Sanson | Vardey | `svardey1@example.com`
-| 3 | Jami | Poe | `jpoe@example.uk`
-| 4 | Trent | Ianno | `tianno3@example.com`
-| 5 | Alikee | Raisbeck | `araisbeck4@example.com`
+| 1 | Ameline | Allanson | `aallanson@example.com` | `123456`
+| 2 | Sanson | Vardey | `svardey1@example.com` | `123456`
+| 3 | Jami | Poe | `jpoe@example.uk` | `123456`
+| 4 | Trent | Ianno | `tianno3@example.com` | `123456`
+| 5 | Alikee | Raisbeck | `araisbeck4@example.com` | `123456`
 |===
 
-For local evaluation, `keycloak/realm-mail-support.json` imports matching Keycloak test identities for these sample profiles. Replace evaluation identities and credentials for real deployments.
+For local evaluation, `keycloak/realm-mail-support.json` imports matching Keycloak test identities for these sample profiles. The initial password is temporary in Keycloak, so the first login can require setting a new password. Replace evaluation identities and credentials for real deployments.
 
 == Operational Notes
 
