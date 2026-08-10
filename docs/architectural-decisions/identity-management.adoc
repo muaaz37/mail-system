@@ -1,0 +1,120 @@
+= Identity Management with Keycloak and OpenID Connect
+:toc:
+:toclevels: 2
+:sectanchors:
+
+== Decision
+
+The Mail Support System uses Keycloak as its Identity Provider and OpenID Connect as the authentication protocol.
+The Angular single-page application uses Authorization Code Flow with PKCE, while the Spring Boot backend operates as a stateless OAuth2 Resource Server.
+
+Local password authentication was removed. The application database stores only the user profile required by the mail and ticket domain; credentials and login sessions are managed by Keycloak.
+
+== Why Keycloak with OpenID Connect Was Selected
+
+The system consists of a browser-based Angular client and a separate REST API. OpenID Connect fits this architecture because it provides standardized user identity information on top of OAuth2 and allows the API to authorize requests using signed access tokens.
+
+Keycloak was selected for the following reasons:
+
+* User passwords are entered only at the Identity Provider and are never sent to or stored by the mail application.
+* OpenID Connect is directly supported by established Angular and Spring Security libraries; no custom authentication protocol has to be implemented.
+* Keycloak centralizes identities, credentials, sessions, password policies and account deactivation.
+* The application depends on one standard protocol instead of depending on Keycloak-specific login code.
+* Keycloak can later act as an identity broker for LDAP, SAML or another OpenID Connect provider without requiring the mail application to implement each approach itself.
+* The selected flow supports Single Sign-On and Single Logout through the Identity Provider.
+
+This reduces authentication responsibility inside the application and follows the lecture principle that an intermediate identity component should handle authentication complexity.
+
+== Alternatives Considered
+
+[cols="2,4,4",options="header"]
+|===
+| Approach | Advantage | Reason not selected
+
+| Local authentication
+| Simple for an isolated application.
+| The application would have to store password hashes, implement login and password management, and protect credentials itself. Users would also require another separate account.
+
+| Direct LDAP authentication
+| Can reuse an existing organizational directory.
+| The application receives the user's password and must implement LDAP binding, certificate trust and safe LDAP searches. It would also be directly coupled to the organization's directory structure.
+
+| SAML through Keycloak
+| Established protocol for enterprise identity federation.
+| The application is an Angular SPA with a JSON REST API. OpenID Connect integrates more naturally with bearer access tokens and the available Angular and Spring Security libraries.
+
+| OpenID Connect through Keycloak
+| Standardized browser authentication, signed tokens, PKCE support and identity claims.
+| Selected because it provides the best match for the existing SPA and REST API architecture.
+|===
+
+The choice is based on the application architecture and course requirements, not on the assumption that OpenID Connect is universally preferable to LDAP or SAML.
+
+== Authentication Flow
+
+. The user starts login in the Angular application.
+. Angular generates a PKCE code verifier and code challenge.
+. The browser is redirected to Keycloak.
+. The user authenticates directly at Keycloak.
+. Keycloak returns a short-lived authorization code to the configured application redirect URI.
+. Angular exchanges the code and verifier for tokens.
+. Angular sends the access token as a bearer token with API requests.
+. Spring Security validates the token issuer, lifetime and cryptographic signature using Keycloak's JWK Set.
+. The backend links the verified `sub` claim to a local application profile.
+
+The ID token represents the authenticated identity in the client. The access token authorizes requests to the backend API. The application never receives the user's Keycloak password.
+
+== Implementation
+
+=== Keycloak
+
+The realm configuration is stored in `keycloak/realm-mail-support.json` and imported during Docker Compose startup.
+
+The Angular client is configured as a public client because browser applications cannot protect a client secret. The configuration therefore uses:
+
+* Standard Authorization Code Flow;
+* mandatory PKCE with `S256`;
+* disabled Implicit Flow;
+* disabled Direct Access Grants;
+* explicitly configured redirect URIs and web origins; and
+* the `openid`, `profile` and `email` scopes.
+
+Keycloak 26.6.3 runs as a separate container with its own PostgreSQL database. Browser access is routed through the TLS reverse proxy; internal backend access to the JWK Set uses the isolated Keycloak network.
+
+=== Angular Client
+
+The frontend uses `angular-oauth2-oidc` and requests:
+
+[source,typescript]
+----
+responseType: 'code'
+scope: 'openid profile email'
+----
+
+Discovery-document validation is enabled, debug information is disabled and the library handles the Authorization Code Flow instead of project-specific OAuth code.
+
+=== Spring Boot API
+
+Spring Security configures the backend as a stateless OAuth2 Resource Server. Public access is limited to health and OpenAPI endpoints; all other API requests require a valid JWT access token.
+
+The backend validates tokens through the configured issuer and JWK Set endpoints. Form login and HTTP Basic authentication are disabled because Keycloak owns authentication.
+
+=== Local User Profile
+
+The backend stores a password-free local profile for business relationships such as mail senders, recipients and ticket assignments. The stable OpenID Connect `sub` claim links that profile to the Keycloak identity.
+
+The `email`, `given_name` and `family_name` claims synchronize profile attributes after authentication. These values are not used as credentials.
+
+== Security Benefits
+
+The decision provides the following security properties:
+
+* no password storage in the application database;
+* no application-owned login or registration endpoint;
+* no client secret embedded in the Angular bundle;
+* PKCE protection for authorization-code interception;
+* signed and time-limited access tokens;
+* centralized session and identity administration; and
+* stateless backend authentication.
+
+Authentication does not replace application authorization. The backend still checks whether the authenticated user may view or modify a mail, attachment or ticket.
