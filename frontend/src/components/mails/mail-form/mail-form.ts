@@ -1,21 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, Input, OnChanges, OnInit, signal } from '@angular/core';
-import {
-  FormControl,
-  FormGroup,
-  FormsModule,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { ChipModule } from 'primeng/chip';
-import { FileRemoveEvent, FileSelectEvent, FileUploadModule } from 'primeng/fileupload';
-import { ImageModule } from 'primeng/image';
 import { InputTextModule } from 'primeng/inputtext';
-import { MultiSelectModule } from 'primeng/multiselect';
 import { TextareaModule } from 'primeng/textarea';
 import { Toast } from 'primeng/toast';
 import { switchMap } from 'rxjs';
@@ -31,6 +21,18 @@ import {
 } from '../../../types/mails';
 import { User } from '../../../types/user';
 import { readApiErrorMessage } from '../../../utils/api-error-message';
+import {
+  buildAttachmentFiles,
+  MailFormAttachments,
+} from './attachments/mail-form-attachments';
+import {
+  areEmailAddressesValid,
+  buildReplySubject,
+  mapMailFormToCreateMail,
+  normalizeReplySubject,
+  parseEmailAddresses,
+} from './mapping/mail-form.mapper';
+import { MailFormRecipients } from './recipients/mail-form-recipients';
 
 @Component({
   selector: 'app-mail-form',
@@ -38,15 +40,12 @@ import { readApiErrorMessage } from '../../../utils/api-error-message';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    FormsModule,
-    ChipModule,
     ButtonModule,
-    MultiSelectModule,
     TextareaModule,
-    FileUploadModule,
     Toast,
     InputTextModule,
-    ImageModule,
+    MailFormRecipients,
+    MailFormAttachments,
   ],
   templateUrl: './mail-form.html',
 })
@@ -55,10 +54,10 @@ export class MailForm implements OnInit, OnChanges {
   @Input() replyTemplate: MailReplyTemplate | null = null;
   @Input() title = 'Create Mail';
 
-  private mailsService = inject(MailsService);
-  private messageService = inject(MessageService);
-  private authService = inject(AuthService);
-  private router = inject(Router);
+  private readonly mailsService = inject(MailsService);
+  private readonly messageService = inject(MessageService);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   protected mailForm = new FormGroup({
     subject: new FormControl('', [Validators.required, Validators.maxLength(500)]),
@@ -80,7 +79,8 @@ export class MailForm implements OnInit, OnChanges {
   protected uploadedFiles = signal<File[]>([]);
   protected isLoading = signal(false);
   protected attachments = signal<Attachment[]>([]);
-  protected readonly acceptedAttachmentTypes = 'image/*,application/pdf,.pdf';
+  protected readonly acceptedAttachmentTypes =
+    'application/pdf,image/png,image/jpeg,image/gif,image/webp,.pdf,.png,.jpg,.jpeg,.gif,.webp';
   protected readonly maxAttachmentSizeBytes = 10 * 1024 * 1024;
   protected readonly maxAttachmentSizeLabel = '10 MB';
   protected readonly MailDeliveryMode = MailDeliveryMode;
@@ -294,56 +294,6 @@ export class MailForm implements OnInit, OnChanges {
   }
 
   /**
-   * Adds newly selected browser files to the current upload queue.
-   *
-   * @param event PrimeNG file selection event containing selected files.
-   */
-  onFileSelect(event: FileSelectEvent): void {
-    this.uploadedFiles.set([...this.uploadedFiles(), ...event.files]);
-  }
-
-  /**
-   * Removes a newly selected browser file from the upload queue.
-   *
-   * @param event PrimeNG file removal event containing the removed file.
-   */
-  onFileRemove(event: FileRemoveEvent): void {
-    this.uploadedFiles.set(this.uploadedFiles().filter((file) => file !== event.file));
-  }
-
-  /**
-   * Removes an already persisted attachment from the draft's retained attachment list.
-   *
-   * @param attachment Existing attachment selected for removal.
-   */
-  onExistingFileRemove(attachment: Attachment): void {
-    this.attachments.set(this.attachments().filter((att) => att.url !== attachment.url));
-  }
-
-  /**
-   * Checks whether an attachment can be displayed as an image preview.
-   *
-   * @param attachment Attachment metadata returned by the backend.
-   * @returns True when the attachment has an image MIME type.
-   */
-  protected isImageAttachment(attachment: Attachment): boolean {
-    return attachment.mimeType?.startsWith('image/') ?? false;
-  }
-
-  /**
-   * Checks whether an attachment should be handled as a PDF preview.
-   *
-   * @param attachment Attachment metadata returned by the backend.
-   * @returns True when the attachment has a PDF MIME type or filename.
-   */
-  protected isPdfAttachment(attachment: Attachment): boolean {
-    return (
-      attachment.mimeType === 'application/pdf' ||
-      attachment.fileName.toLowerCase().endsWith('.pdf')
-    );
-  }
-
-  /**
    * Checks whether at least one team profile is selected as an internal recipient.
    *
    * @returns True when To, Cc or Bcc contains an internal user.
@@ -363,9 +313,9 @@ export class MailForm implements OnInit, OnChanges {
    */
   private externalRecipientsNotEmpty(): boolean {
     return (
-      this.parseEmailList(this.mailForm.controls.externalTo.value).length > 0 ||
-      this.parseEmailList(this.mailForm.controls.externalCc.value).length > 0 ||
-      this.parseEmailList(this.mailForm.controls.externalBcc.value).length > 0
+      parseEmailAddresses(this.mailForm.controls.externalTo.value).length > 0 ||
+      parseEmailAddresses(this.mailForm.controls.externalCc.value).length > 0 ||
+      parseEmailAddresses(this.mailForm.controls.externalBcc.value).length > 0
     );
   }
 
@@ -404,36 +354,22 @@ export class MailForm implements OnInit, OnChanges {
    * @returns Mail payload for create, update and send operations.
    */
   private buildMailData(): CreateMail {
-    return {
-      subject: this.completeSubject(),
-      content: this.mailForm.controls.content.value || '',
-      deliveryMode: this.deliveryMode(),
-      toIds: this.deliveryMode() === MailDeliveryMode.INTERNAL ? this.selectedToUsers() : [],
-      ccIds: this.deliveryMode() === MailDeliveryMode.INTERNAL ? this.selectedCcUsers() : [],
-      bccIds: this.deliveryMode() === MailDeliveryMode.INTERNAL ? this.selectedBccUsers() : [],
-      replyToIds:
-        this.deliveryMode() === MailDeliveryMode.INTERNAL ? this.selectedReplyToUsers() : [],
-      externalTo:
-        this.deliveryMode() === MailDeliveryMode.EXTERNAL
-          ? this.parseEmailList(this.mailForm.controls.externalTo.value)
-          : [],
-      externalCc:
-        this.deliveryMode() === MailDeliveryMode.EXTERNAL
-          ? this.parseEmailList(this.mailForm.controls.externalCc.value)
-          : [],
-      externalBcc:
-        this.deliveryMode() === MailDeliveryMode.EXTERNAL
-          ? this.parseEmailList(this.mailForm.controls.externalBcc.value)
-          : [],
-      externalReplyTo:
-        this.deliveryMode() === MailDeliveryMode.EXTERNAL
-          ? this.parseEmailList(this.mailForm.controls.externalReplyTo.value)
-          : [],
-      replyToMailId:
-        this.replyTemplate?.replyToMailId ??
-        this.mailData?.replyToMailId ??
-        null,
-    };
+    const formValues = this.mailForm.getRawValue();
+
+    return mapMailFormToCreateMail(
+      {
+        ...formValues,
+        subject: this.completeSubject(),
+        content: formValues.content ?? '',
+      },
+      {
+        toIds: this.selectedToUsers(),
+        ccIds: this.selectedCcUsers(),
+        bccIds: this.selectedBccUsers(),
+        replyToIds: this.selectedReplyToUsers(),
+      },
+      this.replyTemplate?.replyToMailId ?? this.mailData?.replyToMailId ?? null,
+    );
   }
 
   /**
@@ -442,13 +378,7 @@ export class MailForm implements OnInit, OnChanges {
    * @returns New uploads plus retained existing attachments represented as File objects.
    */
   private buildAttachmentData(): File[] {
-    const newAttachments = this.uploadedFiles().map((file) => file);
-    const existingAttachments = this.attachments()
-      .filter((attachment) => attachment.blob)
-      .map((attachment) => this.blobToFile(attachment.blob!, attachment.fileName));
-
-    // The backend replaces the complete attachment set, so retained files must be sent again.
-    return [...newAttachments, ...existingAttachments];
+    return buildAttachmentFiles(this.uploadedFiles(), this.attachments());
   }
 
   /**
@@ -461,13 +391,7 @@ export class MailForm implements OnInit, OnChanges {
    * @returns Editable reply subject.
    */
   private editableReplySubject(subject: string): string {
-    if (!this.isReply()) {
-      return subject;
-    }
-
-    const withoutTickets = subject.replace(/\[?\s*TICKET-\d+\s*]?/gi, ' ').trim();
-    const baseSubject = withoutTickets.replace(/^(?:\s*Re\s*:\s*)+/i, '').trim();
-    return `Re: ${baseSubject}`.trim();
+    return this.isReply() ? normalizeReplySubject(subject) : subject;
   }
 
   /**
@@ -480,10 +404,7 @@ export class MailForm implements OnInit, OnChanges {
    */
   protected completeSubject(): string {
     const subject = this.mailForm.controls.subject.value?.trim() ?? '';
-    const ticketNumber = this.replyTicketNumber();
-    return ticketNumber
-      ? `[${ticketNumber}] ${this.editableReplySubject(subject)}`.trim()
-      : subject;
+    return buildReplySubject(subject, this.replyTicketNumber());
   }
 
   /**
@@ -498,40 +419,18 @@ export class MailForm implements OnInit, OnChanges {
   }
 
   /**
-   * Parses comma, semicolon, whitespace and `Name <mail@example.org>` recipient input.
-   *
-   * @param value Raw input from an external recipient field.
-   * @returns Unique email addresses extracted from the input.
-   */
-  private parseEmailList(value: string | null): string[] {
-    const input = value || '';
-    const namedAddressEmails = [...input.matchAll(/<([^<>\s]+@[^<>\s]+)>/g)].map(
-      (match) => match[1],
-    );
-    const plainAddressInput = input.replace(/[^,;]*<[^<>]+>/g, ' ');
-    const plainAddressEmails = plainAddressInput
-      .split(/[;,\s]+/)
-      .map((email) => email.trim())
-      .filter(Boolean);
-
-    return [...namedAddressEmails, ...plainAddressEmails].filter(
-      (email, index, emails) => emails.indexOf(email) === index,
-    );
-  }
-
-  /**
    * Validates all entered external email addresses with a conservative browser-side check.
    *
    * @returns True when every parsed external address has a basic email shape.
    */
   private externalEmailsValid(): boolean {
     const emails = [
-      ...this.parseEmailList(this.mailForm.controls.externalTo.value),
-      ...this.parseEmailList(this.mailForm.controls.externalCc.value),
-      ...this.parseEmailList(this.mailForm.controls.externalBcc.value),
-      ...this.parseEmailList(this.mailForm.controls.externalReplyTo.value),
+      ...parseEmailAddresses(this.mailForm.controls.externalTo.value),
+      ...parseEmailAddresses(this.mailForm.controls.externalCc.value),
+      ...parseEmailAddresses(this.mailForm.controls.externalBcc.value),
+      ...parseEmailAddresses(this.mailForm.controls.externalReplyTo.value),
     ];
-    return emails.every((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+    return areEmailAddressesValid(emails);
   }
 
   /**
@@ -558,8 +457,6 @@ export class MailForm implements OnInit, OnChanges {
 
   /**
    * Shows a warning toast for recoverable user input problems.
-   *
-   * @param detail User-facing warning text.
    */
   private showWarning(detail: string): void {
     this.messageService.add({
@@ -570,21 +467,7 @@ export class MailForm implements OnInit, OnChanges {
   }
 
   /**
-   * Wraps an already loaded attachment blob as a File for multipart replacement uploads.
-   *
-   * @param blob Existing attachment binary loaded from the backend.
-   * @param filename Original attachment filename.
-   * @returns File object that can be appended to multipart form data.
-   */
-  private blobToFile(blob: Blob, filename: string): File {
-    return new File([blob], filename, { type: blob.type });
-  }
-
-  /**
    * Shows a success toast, resets local form state and navigates to the target mailbox view.
-   *
-   * @param message User-facing success message.
-   * @param navigateTo Route that should be opened after the operation succeeds.
    */
   private handleMailSuccess(message: string, navigateTo: string): void {
     this.messageService.add({
@@ -599,9 +482,6 @@ export class MailForm implements OnInit, OnChanges {
 
   /**
    * Shows a sanitized backend error and leaves the user on the current form.
-   *
-   * @param error HTTP error returned by the backend.
-   * @param defaultMessage Safe fallback message for unexpected errors.
    */
   private handleMailError(error: HttpErrorResponse, defaultMessage: string): void {
     this.isLoading.set(false);
@@ -631,7 +511,7 @@ export class MailForm implements OnInit, OnChanges {
         return;
       }
 
-      this.mailsService.updateMails(this.mailData.id, mailData, attachments).subscribe({
+      this.mailsService.updateMail(this.mailData.id, mailData, attachments).subscribe({
         next: () => this.handleMailSuccess('Mail updated successfully', '/mails/drafts'),
         error: (error) => this.handleMailError(error, 'Failed to update mail'),
       });
@@ -683,7 +563,7 @@ export class MailForm implements OnInit, OnChanges {
     this.isLoading.set(true);
 
     this.mailsService
-      .updateMails(this.mailData.id, mailData, attachments)
+      .updateMail(this.mailData.id, mailData, attachments)
       .pipe(switchMap((updatedMail) => this.mailsService.sendMail(updatedMail.id)))
       .subscribe({
         next: () => this.handleMailSuccess('Draft sent successfully', '/mails/sent'),

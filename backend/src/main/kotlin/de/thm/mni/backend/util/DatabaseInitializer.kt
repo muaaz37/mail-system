@@ -22,14 +22,14 @@ import tools.jackson.databind.ObjectMapper
 class DatabaseInitializer(
     private val userRepository: UserRepository,
     private val mailRepository: MailRepository,
-    private val mailRecordRepository: MailRecordRepository
+    private val mailRecordRepository: MailRecordRepository,
+    private val objectMapper: ObjectMapper
 ) : CommandLineRunner {
     /**
      * Reads seed data and stores the initial users, mails and recipient records.
      */
     override fun run(vararg args: String) {
         val resource = ClassPathResource("data.json")
-        val objectMapper = ObjectMapper()
         val jsonData: SeedData = objectMapper.readValue(
             resource.inputStream,
             object : TypeReference<SeedData>() {}
@@ -57,7 +57,7 @@ class DatabaseInitializer(
                 attachments = mutableListOf()
             )
             if (dto.status == MailStatus.SENT) {
-                mail.status = MailStatus.SENT
+                mail.markAsSent()
             }
             val createdMail = mailRepository.save(mail)
             createMailRecords(createdMail, dto.toEmails, dto.ccEmails, dto.bccEmails, dto.replyToEmails)

@@ -10,11 +10,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.core.io.Resource
 import org.springframework.http.MediaType
+import org.springframework.http.ContentDisposition
+import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.jwt.Jwt
 
 
 /**
@@ -25,7 +29,9 @@ import org.springframework.web.bind.annotation.RestController
 @DefaultApiErrors
 @RestController
 @RequestMapping("/api/images")
-class StorageController(private val fileStorageService: FileStorageService) {
+class StorageController(
+    private val attachmentDownloadService: AttachmentDownloadService
+) {
     /**
      * Loads a stored resource by object key and returns it with stored media metadata.
      */
@@ -38,17 +44,26 @@ class StorageController(private val fileStorageService: FileStorageService) {
     @ApiResponse(responseCode = "200", description = "Attachment returned successfully.")
     @NotFoundApiResponse
     @BadGatewayApiResponse
-    fun getImage(
+    fun downloadAttachment(
         @Parameter(description = "Storage object key from an attachment's `path` property.")
-        @PathVariable objectKey: String
+        @PathVariable objectKey: String,
+        @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Resource> {
-        val storedObject = fileStorageService.load(objectKey)
-        val contentType = storedObject.contentType
-            ?.takeIf { value -> value.isNotBlank() }
-            ?.let { value -> MediaType.parseMediaType(value) }
-            ?: MediaType.APPLICATION_OCTET_STREAM
+        val authorizedAttachment = attachmentDownloadService.loadAuthorized(objectKey, jwt)
+        val attachment = authorizedAttachment.attachment
+        val storedObject = authorizedAttachment.storedObject
+        val safeContentType = AttachmentContentTypes.safeResponseType(attachment.mimeType)
+        val contentType = MediaType.parseMediaType(safeContentType)
+        val disposition = if (AttachmentContentTypes.isPreviewable(safeContentType)) {
+            ContentDisposition.inline()
+        } else {
+            ContentDisposition.attachment()
+        }.filename(attachment.fileName ?: "attachment").build()
 
-        val response = ResponseEntity.ok().contentType(contentType)
+        val response = ResponseEntity.ok()
+            .contentType(contentType)
+            .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+            .header("X-Content-Type-Options", "nosniff")
         val contentLength = storedObject.contentLength
 
         return if (contentLength != null) {

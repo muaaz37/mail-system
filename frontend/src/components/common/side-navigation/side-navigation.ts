@@ -9,8 +9,8 @@ import { AuthService } from '../../../services/auth/auth-service';
   styleUrl: './side-navigation.css',
 })
 export class SideNavigation {
-  private router = inject(Router);
-  private authService = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
 
   navigationItems = [
     {

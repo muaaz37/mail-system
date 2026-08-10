@@ -14,8 +14,8 @@ import { readApiErrorMessage } from '../../../utils/api-error-message';
   styleUrl: './mail-drafts.css',
 })
 export class MailDrafts implements OnInit {
-  private mailsService = inject(MailsService);
-  private messageService = inject(MessageService);
+  private readonly mailsService = inject(MailsService);
+  private readonly messageService = inject(MessageService);
 
   protected mails = signal<Mail[]>([]);
   protected isLoading = signal(true);

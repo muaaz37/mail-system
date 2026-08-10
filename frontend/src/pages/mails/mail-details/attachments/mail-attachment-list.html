@@ -1,0 +1,47 @@
+<div class="px-8 py-6 bg-gray-50 border-t border-gray-100">
+  <h4 class="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
+    <i class="pi pi-paperclip"></i> Attachments ({{ attachments.length }})
+  </h4>
+  <div class="flex flex-wrap gap-3">
+    @for (attachment of attachments; track attachment.fileName) {
+      <div
+        [className]="'flex items-center gap-3 p-4 bg-gray-100 border border-gray-300 rounded-md max-w-xl'"
+      >
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium text-gray-700">{{ attachment.fileName }}</span>
+          <span class="text-xs text-gray-400"
+            >{{ (attachment.size / 1024).toFixed(1) }} KB</span
+          >
+          @if (isImage(attachment)) {
+            <p-image
+              [src]="attachment.url"
+              [preview]="true"
+              loading="lazy"
+              alt="Image preview"
+              [className]="'w-20 h-20 object-cover rounded-md mt-1 cursor-pointer'"
+            />
+          } @else if (isPdf(attachment) && attachment.safeUrl) {
+            <iframe
+              [src]="attachment.safeUrl"
+              title="PDF preview"
+              class="w-96 h-64 rounded-md border border-gray-300 bg-white mt-2"
+            ></iframe>
+          } @else {
+            <div
+              class="w-24 h-20 rounded-md border border-gray-300 bg-white mt-2 flex items-center justify-center text-gray-500"
+            >
+              <i class="pi pi-file text-3xl"></i>
+            </div>
+          }
+          <a
+            href="#"
+            (click)="$event.preventDefault(); openAttachment(attachment)"
+            class="text-xs text-blue-600 hover:underline mt-1"
+          >
+            Open attachment
+          </a>
+        </div>
+      </div>
+    }
+  </div>
+</div>

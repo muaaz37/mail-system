@@ -1,0 +1,153 @@
+@if (deliveryMode() === MailDeliveryMode.INTERNAL) {
+  <div class="rounded-xl border border-gray-200 bg-slate-50/60 p-4">
+    <div class="mb-4">
+      <h3 class="text-sm font-semibold text-slate-800">Team recipients</h3>
+      <p class="text-xs text-slate-500">
+        Your own account is excluded to prevent self-send duplicates and unclear inbox entries.
+      </p>
+    </div>
+    <div class="grid gap-4">
+      <div class="flex flex-col gap-2">
+        <label for="internalTo" class="text-sm font-semibold text-slate-700">To</label>
+        @if (reply()) {
+          <input
+            id="internalTo"
+            type="text"
+            pInputText
+            [value]="internalToDisplayValue()"
+            readonly
+            class="w-full cursor-not-allowed border-slate-200 bg-slate-100 text-slate-600"
+          />
+          <small class="text-xs text-slate-500">
+            Locked to the original sender or Reply-To user. Additional recipients can be added with
+            CC or BCC.
+          </small>
+        } @else {
+          <p-multiSelect
+            inputId="internalTo"
+            [options]="availableUsers()"
+            [(ngModel)]="selectedToUsers"
+            [ngModelOptions]="{ standalone: true }"
+            display="chip"
+            optionLabel="email"
+            optionValue="id"
+            placeholder="Select team recipients"
+            [maxSelectedLabels]="6"
+            class="w-full"
+          ></p-multiSelect>
+        }
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label for="internalCc" class="text-sm font-semibold text-slate-700">CC</label>
+        <p-multiSelect
+          inputId="internalCc"
+          [options]="availableUsers()"
+          [(ngModel)]="selectedCcUsers"
+          [ngModelOptions]="{ standalone: true }"
+          display="chip"
+          optionLabel="email"
+          optionValue="id"
+          placeholder="Select CC recipients"
+          [maxSelectedLabels]="6"
+          class="w-full"
+        ></p-multiSelect>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label for="internalBcc" class="text-sm font-semibold text-slate-700">BCC</label>
+        <p-multiSelect
+          inputId="internalBcc"
+          [options]="availableUsers()"
+          [(ngModel)]="selectedBccUsers"
+          [ngModelOptions]="{ standalone: true }"
+          display="chip"
+          optionLabel="email"
+          optionValue="id"
+          placeholder="Select BCC recipients"
+          [maxSelectedLabels]="6"
+          class="w-full"
+        ></p-multiSelect>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label for="internalReplyTo" class="text-sm font-semibold text-slate-700">Reply To</label>
+        <p-multiSelect
+          inputId="internalReplyTo"
+          [options]="availableUsers()"
+          [(ngModel)]="selectedReplyToUsers"
+          [ngModelOptions]="{ standalone: true }"
+          display="chip"
+          optionLabel="email"
+          optionValue="id"
+          placeholder="Select Reply To recipients"
+          [maxSelectedLabels]="6"
+          class="w-full"
+        ></p-multiSelect>
+      </div>
+    </div>
+  </div>
+} @else {
+  <div class="rounded-xl border border-gray-200 bg-slate-50/60 p-4" [formGroup]="form()">
+    <div class="mb-4">
+      <h3 class="text-sm font-semibold text-slate-800">External email recipients</h3>
+      <p class="text-xs text-slate-500">
+        Use commas, semicolons or spaces to separate multiple addresses.
+        @if (reply()) {
+          The To address is locked because support replies must go back to the original sender.
+        }
+      </p>
+    </div>
+    <div class="grid gap-4">
+      <div class="flex flex-col gap-2">
+        <label for="externalTo" class="text-sm font-semibold text-slate-700">To</label>
+        <input
+          id="externalTo"
+          type="text"
+          pInputText
+          formControlName="externalTo"
+          placeholder="recipient@example.org"
+          [readOnly]="reply()"
+          [ngClass]="
+            reply() ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-600' : ''
+          "
+        />
+        @if (reply()) {
+          <small class="text-xs text-slate-500">
+            Locked to the original sender. Additional recipients can be added with CC or BCC.
+          </small>
+        }
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="externalCc" class="text-sm font-semibold text-slate-700">CC</label>
+        <input
+          id="externalCc"
+          type="text"
+          pInputText
+          formControlName="externalCc"
+          placeholder="optional@example.org"
+        />
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="externalBcc" class="text-sm font-semibold text-slate-700">BCC</label>
+        <input
+          id="externalBcc"
+          type="text"
+          pInputText
+          formControlName="externalBcc"
+          placeholder="hidden@example.org"
+        />
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="externalReplyTo" class="text-sm font-semibold text-slate-700">Reply To</label>
+        <input
+          id="externalReplyTo"
+          type="text"
+          pInputText
+          formControlName="externalReplyTo"
+          placeholder="reply@example.org"
+        />
+      </div>
+    </div>
+  </div>
+}

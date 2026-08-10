@@ -17,8 +17,8 @@ import { readApiErrorMessage } from '../../../utils/api-error-message';
 export class MailEdit implements OnInit {
   @Input() protected id!: string;
 
-  private mailsService = inject(MailsService);
-  private messageService = inject(MessageService);
+  private readonly mailsService = inject(MailsService);
+  private readonly messageService = inject(MessageService);
 
   protected mail = signal<Mail | null>(null);
   protected isLoading = signal(true);

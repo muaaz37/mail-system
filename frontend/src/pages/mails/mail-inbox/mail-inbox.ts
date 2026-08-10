@@ -17,9 +17,9 @@ import { getMailSenderDisplay } from '../../../utils/mail-senders';
   styleUrl: './mail-inbox.css',
 })
 export class MailInbox implements OnInit {
-  private mailsService = inject(MailsService);
-  private messageService = inject(MessageService);
-  private router = inject(Router);
+  private readonly mailsService = inject(MailsService);
+  private readonly messageService = inject(MessageService);
+  private readonly router = inject(Router);
 
   protected mails = signal<Mail[]>([]);
   protected isLoading = signal(true);

@@ -2,11 +2,9 @@ package de.thm.mni.backend.ticket
 
 import de.thm.mni.backend.error.ResourceNotFoundException
 import de.thm.mni.backend.ticket.enums.SupportTicketPriority
-import de.thm.mni.backend.ticket.enums.SupportTicketStatus
 import de.thm.mni.backend.user.User
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
-import java.time.LocalDateTime
 import java.util.UUID
 
 /**
@@ -34,8 +32,7 @@ class SupportTicketCommandService(private val ticketRepository: SupportTicketRep
     @Transactional
     fun resolveTicket(ticketId: UUID): SupportTicket {
         val ticket = ticketOrNotFound(ticketId)
-        ticket.status = SupportTicketStatus.RESOLVED
-        ticket.closedAt = LocalDateTime.now()
+        ticket.resolve()
         return ticketRepository.save(ticket)
     }
 
@@ -48,8 +45,7 @@ class SupportTicketCommandService(private val ticketRepository: SupportTicketRep
     @Transactional
     fun reopenTicket(ticketId: UUID): SupportTicket {
         val ticket = ticketOrNotFound(ticketId)
-        ticket.status = SupportTicketStatus.WAITING_FOR_SUPPORT
-        ticket.closedAt = null
+        ticket.reopen()
         return ticketRepository.save(ticket)
     }
 
@@ -63,7 +59,7 @@ class SupportTicketCommandService(private val ticketRepository: SupportTicketRep
     @Transactional
     fun assignTo(ticketId: UUID, user: User): SupportTicket {
         val ticket = ticketOrNotFound(ticketId)
-        ticket.assignedTo = user
+        ticket.assignTo(user)
         return ticketRepository.save(ticket)
     }
 
@@ -76,7 +72,7 @@ class SupportTicketCommandService(private val ticketRepository: SupportTicketRep
     @Transactional
     fun unassign(ticketId: UUID): SupportTicket {
         val ticket = ticketOrNotFound(ticketId)
-        ticket.assignedTo = null
+        ticket.unassign()
         return ticketRepository.save(ticket)
     }
 
@@ -90,7 +86,7 @@ class SupportTicketCommandService(private val ticketRepository: SupportTicketRep
     @Transactional
     fun updatePriority(ticketId: UUID, priority: SupportTicketPriority): SupportTicket {
         val ticket = ticketOrNotFound(ticketId)
-        ticket.priority = priority
+        ticket.changePriority(priority)
         return ticketRepository.save(ticket)
     }
 }

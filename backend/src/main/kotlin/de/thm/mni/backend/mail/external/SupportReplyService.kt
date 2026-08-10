@@ -2,6 +2,7 @@ package de.thm.mni.backend.mail.external
 
 import de.thm.mni.backend.error.InvalidMailRequestException
 import de.thm.mni.backend.mail.Mail
+import de.thm.mni.backend.mail.MailReplyHandler
 import de.thm.mni.backend.mail.dto.MailPayload
 import de.thm.mni.backend.mail.dto.ExternalMailReplyTemplate
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
@@ -10,6 +11,7 @@ import de.thm.mni.backend.mail.toRecipientList
 import de.thm.mni.backend.mail.toRecipientString
 import de.thm.mni.backend.ticket.SupportTicketLifecycleService
 import de.thm.mni.backend.ticket.SupportTicketService
+import de.thm.mni.backend.user.User
 import jakarta.mail.internet.AddressException
 import jakarta.mail.internet.InternetAddress
 import jakarta.transaction.Transactional
@@ -22,12 +24,18 @@ import org.springframework.stereotype.Service
 class SupportReplyService(
     private val supportTicketService: SupportTicketService,
     private val supportTicketLifecycleService: SupportTicketLifecycleService
-) {
+) : MailReplyHandler {
+
+    override val deliveryMode = MailDeliveryMode.EXTERNAL
+
     /**
      * Creates a reply template with ticket subject and the best external recipient address.
      */
     @Transactional
-    fun getReplyTemplate(originalMail: Mail): ExternalMailReplyTemplate {
+    override fun getReplyTemplate(
+        originalMail: Mail,
+        currentUser: User
+    ): ExternalMailReplyTemplate {
         ensureCanReplyToSupportMail(originalMail)
         val ticket = supportTicketLifecycleService.ensureTicketForMail(originalMail)
         val ticketNumber = ticket.ticketNumber
@@ -48,7 +56,11 @@ class SupportReplyService(
      * Replaces client-supplied primary recipients with the original support sender.
      */
     @Transactional
-    fun enforceReplyRecipient(payload: MailPayload, originalMail: Mail) {
+    override fun enforceReplyContext(
+        originalMail: Mail,
+        payload: MailPayload,
+        currentUser: User
+    ) {
         if (payload.deliveryMode != MailDeliveryMode.EXTERNAL) {
             throw InvalidMailRequestException(
                 "Support replies must be external mails."
@@ -85,8 +97,8 @@ class SupportReplyService(
      * @param originalMail The original support mail.
      */
     @Transactional
-    fun applyReplyContext(mail: Mail, originalMail: Mail) {
-        if (mail.deliveryMode != MailDeliveryMode.EXTERNAL) {
+    override fun applyReplyContext(replyMail: Mail, originalMail: Mail) {
+        if (replyMail.deliveryMode != MailDeliveryMode.EXTERNAL) {
             throw InvalidMailRequestException(
                 "Support replies must use external delivery."
             )
@@ -94,20 +106,20 @@ class SupportReplyService(
 
         ensureCanReplyToSupportMail(originalMail)
 
-        mail.inReplyToMail = originalMail
+        replyMail.inReplyToMail = originalMail
         val ticket = supportTicketLifecycleService.attachReplyMail(
-            mail,
+            replyMail,
             originalMail
         )
 
-        mail.externalTo = listOf(
+        replyMail.externalTo = listOf(
             replyRecipientFor(originalMail)
         ).toRecipientString()
 
-        mail.externalInReplyTo = originalMail.externalMessageId
-        mail.externalReferences = referencesForReply(originalMail)
-        mail.subject = supportTicketService.prependTicketIfMissing(
-            mail.subject,
+        replyMail.externalInReplyTo = originalMail.externalMessageId
+        replyMail.externalReferences = referencesForReply(originalMail)
+        replyMail.subject = supportTicketService.prependTicketIfMissing(
+            replyMail.subject,
             ticket.ticketNumber
         )
     }

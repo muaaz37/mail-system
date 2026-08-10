@@ -46,14 +46,17 @@ class SupportTicket {
     @Column
     @Enumerated(EnumType.STRING)
     var status: SupportTicketStatus = SupportTicketStatus.WAITING_FOR_SUPPORT
+        private set
 
     @Column
     @Enumerated(EnumType.STRING)
     var priority: SupportTicketPriority = SupportTicketPriority.NORMAL
+        private set
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to_id")
     var assignedTo: User? = null
+        private set
 
     @OneToMany(mappedBy = "ticket")
     var mails: MutableList<Mail> = mutableListOf()
@@ -66,6 +69,39 @@ class SupportTicket {
 
     @Column(name = "closed_at")
     var closedAt: LocalDateTime? = null
+        private set
+
+    fun assignTo(user: User) {
+        assignedTo = user
+    }
+
+    fun unassign() {
+        assignedTo = null
+    }
+
+    fun resolve() {
+        status = SupportTicketStatus.RESOLVED
+        closedAt = LocalDateTime.now()
+    }
+
+    fun reopen() {
+        status = SupportTicketStatus.WAITING_FOR_SUPPORT
+        closedAt = null
+    }
+
+    fun markWaitingForSupport() {
+        status = SupportTicketStatus.WAITING_FOR_SUPPORT
+        closedAt = null
+    }
+
+    fun markWaitingForCustomer() {
+        status = SupportTicketStatus.WAITING_FOR_CUSTOMER
+        closedAt = null
+    }
+
+    fun changePriority(priority: SupportTicketPriority) {
+        this.priority = priority
+    }
 
     @PrePersist
     fun onCreate() {

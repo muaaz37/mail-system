@@ -3,7 +3,6 @@ package de.thm.mni.backend.ticket
 import de.thm.mni.backend.mail.Mail
 import de.thm.mni.backend.mail.MailRepository
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
-import de.thm.mni.backend.mail.enums.MailStatus
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.any
@@ -109,7 +108,7 @@ class SupportTicketLifecycleServiceTests {
     private fun sentReplyMail(messageId: String, ticket: SupportTicket): Mail {
         return Mail().apply {
             id = UUID.randomUUID()
-            status = MailStatus.SENT
+            markAsSent()
             deliveryMode = MailDeliveryMode.EXTERNAL
             externalMessageId = messageId
             this.ticket = ticket
@@ -124,7 +123,7 @@ class SupportTicketLifecycleServiceTests {
     ): Mail {
         return Mail().apply {
             id = UUID.randomUUID()
-            status = MailStatus.RECEIVED
+            markAsReceived()
             deliveryMode = MailDeliveryMode.EXTERNAL
             this.subject = subject
             externalSenderEmail = senderEmail

@@ -2,6 +2,7 @@ package de.thm.mni.backend.error
 
 import de.thm.mni.backend.storage.FileStorageException
 import de.thm.mni.backend.storage.FileStorageObjectNotFoundException
+import de.thm.mni.backend.storage.UnsupportedAttachmentTypeException
 import org.slf4j.LoggerFactory
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.http.HttpStatus
@@ -108,6 +109,14 @@ class ErrorHandler {
         return ResponseEntity<AppError>(error, HttpStatus.UNSUPPORTED_MEDIA_TYPE)
     }
 
+    /** Rejects attachment formats that cannot be rendered safely. */
+    @ExceptionHandler(UnsupportedAttachmentTypeException::class)
+    fun handleUnsupportedAttachmentType(err: UnsupportedAttachmentTypeException): ResponseEntity<AppError> {
+        log.warn("Unsupported attachment rejected: {}", err.message)
+        val error = AppError(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), UNSUPPORTED_ATTACHMENT_TYPE_MESSAGE)
+        return ResponseEntity<AppError>(error, HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+    }
+
     /**
      * Handles SMTP or attachment failures while keeping the draft available for retry.
      */
@@ -148,6 +157,7 @@ class ErrorHandler {
         const val ATTACHMENT_TOO_LARGE_MESSAGE = "Attachment is too large. Maximum file size is 10 MB."
         const val ATTACHMENT_UPLOAD_FAILED_MESSAGE = "Attachment upload could not be processed."
         const val UNSUPPORTED_MEDIA_TYPE_MESSAGE = "The request contains an unsupported content type."
+        const val UNSUPPORTED_ATTACHMENT_TYPE_MESSAGE = "Only PDF, PNG, JPEG, GIF and WebP attachments are allowed."
         const val ATTACHMENT_STORAGE_FAILED_MESSAGE = "Attachment storage is currently unavailable."
         const val ATTACHMENT_NOT_FOUND_MESSAGE = "Attachment was not found."
         const val AUTHENTICATION_REFRESH_REQUIRED_MESSAGE = "Authentication required. Please log in again."

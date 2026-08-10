@@ -21,7 +21,7 @@ export class AuthService {
    *
    * @returns A shared promise that resolves when authentication bootstrap is finished.
    */
-  public initialize(): Promise<void> {
+  initialize(): Promise<void> {
     if (!this.initializationPromise) {
       this.initializationPromise = this.initializeOidc();
     }
@@ -32,14 +32,14 @@ export class AuthService {
   /**
    * Starts the OpenID Connect Authorization Code Flow with PKCE.
    */
-  public login(): void {
+  login(): void {
     this.oauthService.initCodeFlow();
   }
 
   /**
    * Clears the cached profile and redirects to the identity provider logout endpoint.
    */
-  public logout(): void {
+  logout(): void {
     this.currentUser = null;
     this.oauthService.logOut();
   }
@@ -49,7 +49,7 @@ export class AuthService {
    *
    * @returns True when an unexpired access token is available.
    */
-  public isAuthenticated(): boolean {
+  isAuthenticated(): boolean {
     return this.oauthService.hasValidAccessToken();
   }
 
@@ -58,7 +58,7 @@ export class AuthService {
    *
    * @returns The current profile, or null when no valid session is available.
    */
-  public getCurrentUser(): User | null {
+  getCurrentUser(): User | null {
     return this.currentUser;
   }
 

@@ -42,4 +42,9 @@ class SupportTicketReadState {
 
     @Column(name = "read_at", nullable = false)
     var readAt: LocalDateTime = LocalDateTime.now()
+        private set
+
+    fun markAsRead() {
+        readAt = LocalDateTime.now()
+    }
 }

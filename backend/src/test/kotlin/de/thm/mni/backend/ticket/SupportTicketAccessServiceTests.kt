@@ -2,7 +2,6 @@ package de.thm.mni.backend.ticket
 
 import de.thm.mni.backend.mail.Mail
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
-import de.thm.mni.backend.mail.enums.MailStatus
 import de.thm.mni.backend.mail.enums.MailType
 import de.thm.mni.backend.mailrecord.MailRecord
 import de.thm.mni.backend.mailrecord.MailRecordService
@@ -45,7 +44,7 @@ class SupportTicketAccessServiceTests {
     fun `external incoming ticket remains visible to team profiles`() {
         val mail = Mail().apply {
             id = UUID.randomUUID()
-            status = MailStatus.RECEIVED
+            markAsReceived()
             deliveryMode = MailDeliveryMode.EXTERNAL
             sender = null
         }
@@ -65,7 +64,7 @@ class SupportTicketAccessServiceTests {
      */
     private fun internalMail(sender: User) = Mail(sender, "Internal request", "Please help", mutableListOf()).apply {
         id = UUID.randomUUID()
-        status = MailStatus.SENT
+        markAsSent()
         deliveryMode = MailDeliveryMode.INTERNAL
     }
 

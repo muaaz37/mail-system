@@ -2,6 +2,7 @@ package de.thm.mni.backend.mail.internal
 
 import de.thm.mni.backend.error.InvalidMailRequestException
 import de.thm.mni.backend.mail.Mail
+import de.thm.mni.backend.mail.MailReplyHandler
 import de.thm.mni.backend.mail.buildReplySubject
 import de.thm.mni.backend.mail.dto.InternalMailReplyTemplate
 import de.thm.mni.backend.mail.dto.MailPayload
@@ -19,13 +20,15 @@ import java.util.UUID
 @Service
 class InternalReplyService(
     private val mailRecordService: MailRecordService
-) {
+) : MailReplyHandler {
+
+    override val deliveryMode = MailDeliveryMode.INTERNAL
 
     /**
      * Links an internal reply to its original mail without entering the
      * external support-ticket lifecycle.
      */
-    fun applyReplyContext(
+    override fun applyReplyContext(
         replyMail: Mail,
         originalMail: Mail
     ) {
@@ -46,7 +49,7 @@ class InternalReplyService(
      * Builds a reply template for an internal mail received by the current
      * user.
      */
-    fun getReplyTemplate(
+    override fun getReplyTemplate(
         originalMail: Mail,
         currentUser: User
     ): InternalMailReplyTemplate {
@@ -66,7 +69,7 @@ class InternalReplyService(
      * This prevents clients from changing the primary recipient while keeping
      * a foreign reply context.
      */
-    fun enforceReplyContext(
+    override fun enforceReplyContext(
         originalMail: Mail,
         payload: MailPayload,
         currentUser: User

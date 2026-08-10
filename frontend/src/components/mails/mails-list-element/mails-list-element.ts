@@ -15,7 +15,7 @@ export class MailsListElement {
   @Input() mail!: Mail;
   @Input() mailbox: 'inbox' | 'sent' | 'drafts' = 'inbox';
 
-  private router = inject(Router);
+  private readonly router = inject(Router);
   protected readonly getSeverityBadge = getSeverityBadge;
   protected readonly getMailSenderDisplay = getMailSenderDisplay;
 

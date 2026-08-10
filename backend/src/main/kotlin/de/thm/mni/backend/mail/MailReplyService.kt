@@ -4,8 +4,6 @@ import de.thm.mni.backend.error.ResourceNotFoundException
 import de.thm.mni.backend.mail.dto.MailPayload
 import de.thm.mni.backend.mail.dto.MailReplyTemplate
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
-import de.thm.mni.backend.mail.external.SupportReplyService
-import de.thm.mni.backend.mail.internal.InternalReplyService
 import de.thm.mni.backend.user.User
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
@@ -17,9 +15,15 @@ import java.util.UUID
 @Service
 class MailReplyService(
     private val mailRepository: MailRepository,
-    private val internalReplyService: InternalReplyService,
-    private val supportReplyService: SupportReplyService
+    replyHandlers: List<MailReplyHandler>
 ) {
+    private val replyHandlersByMode = replyHandlers.associateBy(MailReplyHandler::deliveryMode)
+
+    init {
+        require(replyHandlersByMode.size == replyHandlers.size) {
+            "Only one mail reply handler may be configured per delivery mode."
+        }
+    }
 
     /**
      * Stores the relation to the original mail and applies channel-specific
@@ -34,19 +38,10 @@ class MailReplyService(
 
         val originalMail = findOriginalMail(replyToMailId)
 
-        when (originalMail.deliveryMode) {
-            MailDeliveryMode.INTERNAL ->
-                internalReplyService.applyReplyContext(
-                    replyMail = replyMail,
-                    originalMail = originalMail
-                )
-
-            MailDeliveryMode.EXTERNAL ->
-                supportReplyService.applyReplyContext(
-                    mail = replyMail,
-                    originalMail = originalMail
-                )
-        }
+        handlerFor(originalMail.deliveryMode).applyReplyContext(
+            replyMail = replyMail,
+            originalMail = originalMail
+        )
     }
 
     /**
@@ -57,13 +52,7 @@ class MailReplyService(
         originalMail: Mail,
         currentUser: User
     ): MailReplyTemplate {
-        return when (originalMail.deliveryMode) {
-            MailDeliveryMode.INTERNAL ->
-                internalReplyService.getReplyTemplate(originalMail, currentUser)
-
-            MailDeliveryMode.EXTERNAL ->
-                supportReplyService.getReplyTemplate(originalMail)
-        }
+        return handlerFor(originalMail.deliveryMode).getReplyTemplate(originalMail, currentUser)
     }
 
     /**
@@ -81,20 +70,16 @@ class MailReplyService(
             ?: storedOriginalMail
             ?: return
 
-        when (originalMail.deliveryMode) {
-            MailDeliveryMode.INTERNAL ->
-                internalReplyService.enforceReplyContext(
-                    originalMail = originalMail,
-                    payload = payload,
-                    currentUser = currentUser
-                )
+        handlerFor(originalMail.deliveryMode).enforceReplyContext(
+            originalMail = originalMail,
+            payload = payload,
+            currentUser = currentUser
+        )
+    }
 
-            MailDeliveryMode.EXTERNAL ->
-                supportReplyService.enforceReplyRecipient(
-                    payload = payload,
-                    originalMail = originalMail
-                )
-        }
+    private fun handlerFor(deliveryMode: MailDeliveryMode): MailReplyHandler {
+        return replyHandlersByMode[deliveryMode]
+            ?: error("No mail reply handler configured for delivery mode $deliveryMode.")
     }
 
     /**

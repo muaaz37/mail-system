@@ -8,8 +8,8 @@ import de.thm.mni.backend.mail.dto.MailUpdate
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
 import de.thm.mni.backend.mail.external.SupportReplyService
+import de.thm.mni.backend.mail.validation.MailRecipientValidator
 import de.thm.mni.backend.mailrecord.MailRecordService
-import de.thm.mni.backend.smtp.SMTPService
 import de.thm.mni.backend.ticket.SupportTicketLifecycleService
 import de.thm.mni.backend.user.User
 import jakarta.transaction.Transactional
@@ -23,7 +23,7 @@ import java.util.UUID
 @Service
 class MailService(
     private val mailRepository: MailRepository,
-    private val smtpService: SMTPService,
+    private val mailSender: MailSender,
     private val mailRecordService: MailRecordService,
     private val mailRecipientValidator: MailRecipientValidator,
     private val mailAttachmentHandler: MailAttachmentHandler,
@@ -31,39 +31,6 @@ class MailService(
     private val supportTicketLifecycleService: SupportTicketLifecycleService,
     private val mailReplyService: MailReplyService
 ) {
-    /**
-     * Loads one mail by its identifier without applying authorization rules.
-     */
-    fun getMailById(id: UUID): Mail? {
-        return mailRepository.findById(id).orElse(null)
-    }
-
-    /**
-     * Returns all draft mails created by the given user.
-     */
-    fun getAllCreatedUserMails(user: User): List<Mail> {
-        return mailRepository.findAllBySender(user).toList().filter { mail -> mail.status == MailStatus.DRAFT }
-    }
-
-    /**
-     * Returns all sent mails created by the given user.
-     */
-    fun getAllSentUserMails(user: User): List<Mail> {
-        return mailRepository.findAllBySender(user)
-            .filter { mail -> mail.status == MailStatus.SENT }
-            .sortedByDescending { mail -> mail.sentAt ?: mail.createdAt }
-    }
-
-    /**
-     * Returns internal incoming mails plus imported support mails visible to all team profiles.
-     */
-    fun getIncomingMailsForUser(userId: UUID): List<Mail> {
-        val internalIncomingMails = mailRecordService.getAllIncomingMailsForUser(userId)
-        val importedSupportMails = mailRepository.findAllByStatus(MailStatus.RECEIVED)
-            .filter { mail -> mail.sender == null }
-        return (internalIncomingMails + importedSupportMails).distinctBy { mail -> mail.id }
-    }
-
     /**
      * Deletes a mail with its stored attachments and internal recipient records.
      */
@@ -86,12 +53,12 @@ class MailService(
 
         if (mail.deliveryMode == MailDeliveryMode.EXTERNAL) {
             supportReplyService.enforceTicketSubject(mail)
-            if (!smtpService.sendEmail(mail)) {
+            if (!mailSender.send(mail)) {
                 throw MailSendFailedException("Mail could not be sent. The draft was kept for retry.")
             }
         }
 
-        mail.status = MailStatus.SENT
+        mail.markAsSent()
         val sentMail = mailRepository.save(mail)
         // Internal messages stay regular application mails. Only external support
         // replies participate in the support-ticket lifecycle.
@@ -139,7 +106,7 @@ class MailService(
      */
     @Transactional
     fun updateMail(id: UUID, mail: MailUpdate, attachments: List<MultipartFile>): Mail {
-        val existingMail = getMailById(id)!!
+        val existingMail = mailRepository.findById(id).orElseThrow()
         val sender = requireNotNull(existingMail.sender)
         val storedOriginalMail = existingMail.inReplyToMail
 

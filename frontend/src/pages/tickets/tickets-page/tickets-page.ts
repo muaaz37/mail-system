@@ -45,9 +45,9 @@ export class TicketsPage implements OnInit {
   protected items = signal<TicketListItem[]>([]);
   protected isLoading = signal(true);
 
-  private ticketsService = inject(TicketsService);
-  private messageService = inject(MessageService);
-  private router = inject(Router);
+  private readonly ticketsService = inject(TicketsService);
+  private readonly messageService = inject(MessageService);
+  private readonly router = inject(Router);
 
   /**
    * Configures the queue view from the current route and loads its messages.

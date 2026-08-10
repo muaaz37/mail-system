@@ -17,7 +17,7 @@ export class AuthGuard implements CanActivate {
    * Determines whether the route can be activated based on the user's authentication status.
    * If the user is authenticated, the route is activated. Otherwise, the user is redirected to the login page.
    */
-  public canActivate(): boolean | UrlTree {
+  canActivate(): boolean | UrlTree {
     if (this.authService.isAuthenticated()) {
       return true;
     }
