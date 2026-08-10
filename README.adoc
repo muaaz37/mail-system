@@ -334,7 +334,7 @@ Direct backend and frontend dependencies are pinned to fixed versions in their b
 
 | Production-style container build
 | Docker, Docker Compose and a root `.env` created from `.env.example`. The `.env` file must provide database credentials, S3/SeaweedFS credentials, SMTP/IMAP mailbox settings, support-mail address and Keycloak settings.
-| `./gradlew startLocal` creates a local TLS certificate when missing, runs `docker compose up --build`, builds the Angular production bundle, builds the backend runtime image and starts the complete container stack behind the IPS/WAF edge path.
+| `./gradlew startLocal` creates a local TLS certificate when missing, runs `docker compose up -d --build --remove-orphans`, builds the Angular production bundle, builds the backend runtime image, waits for the HTTPS health endpoint and starts the complete container stack behind the IPS/WAF edge path.
 
 | Direct backend development
 | Java 21. Optional datasource and mail/storage environment variables can be exported from `.env`; otherwise the backend can use its direct-start fallback configuration for local development.
@@ -432,13 +432,20 @@ After `.env` has been created and filled with the required runtime values, build
 ./gradlew startLocal
 ----
 
-The Gradle task invokes `scripts/start-local.sh`, creates the local self-signed proxy certificate when it is missing and then runs `docker compose up --build`. This keeps generated certificate files and private keys out of version control.
+The Gradle task invokes `scripts/start-local.sh`, creates the local self-signed proxy certificate when it is missing, starts Docker Compose in detached mode and waits until the HTTPS health endpoint is reachable. This keeps generated certificate files and private keys out of version control and gives a clear success or failure result.
 
 If the local certificate already exists, the same command reuses it. To start Compose manually, run:
 
 [source,bash]
 ----
-docker compose up --build
+docker compose up -d --build --remove-orphans
+----
+
+To inspect the running containers after `startLocal`, stream the logs with:
+
+[source,bash]
+----
+./gradlew logsLocal
 ----
 
 Open the application at:
@@ -669,6 +676,10 @@ Rebuild the Docker image from the repository root. The backend Dockerfile runs t
 ./gradlew startLocal
 ----
 
+=== `startLocal` waits during startup
+
+`startLocal` starts the containers in the background and then waits until `https://localhost/api/health` is reachable through the IPS/WAF path. Temporary `502 Bad Gateway` entries during this phase mean the proxy received a request before the backend accepted traffic. They are only a startup problem if the health wait times out.
+
 === Frontend cannot reach the API during development
 
 For Docker, access the application through https://localhost/app/ so the edge gateway can forward `/api/*` to the backend. For separate development servers, make sure the backend is reachable on http://localhost:8080 and restart `npm run start` so Angular loads `proxy.conf.json`.
@@ -676,6 +687,16 @@ For Docker, access the application through https://localhost/app/ so the edge ga
 === Login fails after deleting Docker volumes
 
 Deleting Docker volumes removes application and identity-provider state. Restart the full Docker Compose stack, open the frontend through the edge gateway at https://localhost/app/ and start a fresh login through Keycloak.
+
+=== Keycloak or backend reports database authentication errors
+
+PostgreSQL initializes users and passwords only when the corresponding Docker volume is created. If `.env` database credentials are changed while `db_data` or `keycloak_db_data` already exists, the containers can reject the new credentials. Either restore the original credentials in `.env` or reset the local development volumes:
+
+[source,bash]
+----
+./gradlew resetLocal
+./gradlew startLocal
+----
 
 === Database state should be reset
 

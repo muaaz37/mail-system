@@ -67,6 +67,12 @@ tasks.register<Exec>("stopLocal") {
     commandLine("bash", "scripts/docker-compose-local.sh", "down")
 }
 
+tasks.register<Exec>("logsLocal") {
+    group = "application"
+    description = "Streams logs from the local Docker Compose stack."
+    commandLine("bash", "scripts/docker-compose-local.sh", "logs", "-f")
+}
+
 tasks.register<Exec>("resetLocal") {
     group = "application"
     description = "Stops the local Docker Compose stack and removes persisted Docker volumes."
