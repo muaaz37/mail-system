@@ -1,5 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MessageService } from 'primeng/api';
+import { NEVER } from 'rxjs';
 
+import { MailsService } from '../../../services/mails/mails-service';
 import { MailEdit } from './mail-edit';
 
 describe('MailEdit', () => {
@@ -8,7 +11,11 @@ describe('MailEdit', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MailEdit]
+      imports: [MailEdit],
+      providers: [
+        MessageService,
+        { provide: MailsService, useValue: { getMailById: () => NEVER } },
+      ],
     })
     .compileComponents();
 

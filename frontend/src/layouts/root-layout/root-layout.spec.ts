@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
+import { AuthService } from '../../services/auth/auth-service';
 import { RootLayout } from './root-layout';
 
 describe('RootLayout', () => {
@@ -8,7 +10,11 @@ describe('RootLayout', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [RootLayout]
+      imports: [RootLayout],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { logout: () => undefined } },
+      ],
     })
     .compileComponents();
 
