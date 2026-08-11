@@ -66,6 +66,7 @@ The system is designed as a split frontend/backend application with externalized
 |===
 
 The authentication choice, considered alternatives and implemented OpenID Connect flow are documented in link:docs/architectural-decisions/identity-management.adoc[Identity Management with Keycloak and OpenID Connect].
+The review of the original application state and the resulting implementation direction is documented in link:docs/original-application-review.adoc[Original Application Review].
 
 == Scope
 

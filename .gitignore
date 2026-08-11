@@ -43,6 +43,7 @@ docs/*
 !docs/infrastructure/**
 !docs/architectural-decisions/
 !docs/architectural-decisions/**
+!docs/original-application-review.adoc
 docs/infrastructure/.DS_Store
 docs/architectural-decisions/.DS_Store
 loesung.md

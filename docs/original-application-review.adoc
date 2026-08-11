@@ -1,0 +1,114 @@
+= Original Application Review
+:toc:
+:toclevels: 2
+:sectanchors:
+
+This document summarizes the technical and conceptual state of the application that was used as the starting point for the project work. It documents the initial issues that were identified and later addressed in the current Mail Support System.
+
+== Purpose
+
+The original application provided a basic internal messaging workflow. It was suitable as a starting point for a full-stack exercise, but it did not yet satisfy the support-mailbox, external mail, attachment-storage, authentication and production-startup requirements of the final system.
+
+== User-Visible Behavior
+
+The original application supported these basic behaviors:
+
+* user registration, login and logout;
+* internal messages between registered users;
+* inbox, draft and sent-message views;
+* message deletion;
+* small image attachment uploads; and
+* a fallback page for unknown frontend routes.
+
+The following conceptual limitations were identified:
+
+* messages were delivered only inside the application;
+* external SMTP sending and IMAP receiving were absent;
+* attachments depended on local filesystem storage;
+* the default database was an in-memory H2 setup;
+* authentication was owned by the application itself;
+* the backend API was not hidden behind the final reverse-proxy path; and
+* the application model did not yet represent a shared support mailbox with ticket tracking.
+
+== Initial Project Structure
+
+The starting project was already split into two application modules:
+
+[cols="1,3",options="header"]
+|===
+| Module | Responsibility
+
+| `frontend`
+| Angular application with pages, components, services, route guards and TypeScript models.
+
+| `backend`
+| Kotlin/Spring Boot application with controllers, services, repositories, persistence models and security configuration.
+|===
+
+This structure separated the browser UI from backend API and persistence code. The later implementation kept this separation and extended it with Dockerized infrastructure, external identity management, external object storage and mail-server integrations.
+
+== Initial Technology Stack
+
+[cols="1,2",options="header"]
+|===
+| Area | Original role
+
+| Angular and TypeScript
+| Implemented the single-page frontend and typed browser-side code.
+
+| PrimeNG, Tailwind CSS and RxJS
+| Provided UI components, styling utilities and asynchronous frontend data handling.
+
+| Kotlin, Java and Spring Boot
+| Implemented the backend API and application logic.
+
+| Spring Web, Spring Security and Spring Data JPA
+| Exposed REST endpoints, protected API access and persisted domain objects.
+
+| H2 and optional PostgreSQL
+| Provided local persistence during development.
+
+| Local filesystem uploads
+| Stored attachment binaries in an application-local directory.
+
+| Gradle and npm
+| Built backend and frontend artifacts.
+|===
+
+== Architectural Issues Identified
+
+The initial architecture followed a simple client-server shape:
+
+[source,text]
+----
+Browser
+  -> Angular frontend
+  -> Spring Boot REST API
+      -> H2 or PostgreSQL database
+      -> local attachment directory
+----
+
+The main architectural issues were:
+
+* local attachment storage made the backend stateful;
+* local authentication forced the application to manage credentials;
+* external support mail communication was missing;
+* support tickets and ticket tracking were not modeled;
+* production-style startup did not cover the complete infrastructure stack; and
+* deployment security layers such as reverse proxy, TLS, WAF, IPS and network separation were not part of the original runtime model.
+
+== Resulting Implementation Direction
+
+The current implementation addresses these findings by introducing:
+
+* Keycloak with OpenID Connect for authentication;
+* a stateless Spring Security OAuth2 Resource Server backend;
+* PostgreSQL as the application database in Docker Compose;
+* SeaweedFS through an S3-compatible API for attachment binaries;
+* IMAP polling for unread support-mail imports;
+* SMTP delivery through the configured support mailbox;
+* persistent support tickets with ticket-code handling;
+* Angular delivery through Caddy under `/app/`;
+* API access through `/api/` behind the edge proxy path;
+* Snort IPS and ModSecurity/Nginx WAF layers; and
+* Gradle tasks for single-command local startup, linting and build verification.
