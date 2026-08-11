@@ -2,6 +2,7 @@ package de.thm.mni.backend.mail
 
 import de.thm.mni.backend.error.MailSendFailedException
 import de.thm.mni.backend.error.ResourceCannotBeModifiedException
+import de.thm.mni.backend.error.ResourceNotFoundException
 import de.thm.mni.backend.mail.enums.MailDeliveryMode
 import de.thm.mni.backend.mail.enums.MailStatus
 import de.thm.mni.backend.mail.external.SupportReplyService
@@ -13,8 +14,10 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import de.thm.mni.backend.user.User
 
 class MailServiceTests {
     private val mailRepository = mock(MailRepository::class.java)
@@ -58,6 +61,44 @@ class MailServiceTests {
         val mail = draft(MailDeliveryMode.INTERNAL).apply { markAsSent() }
 
         assertFailsWith<ResourceCannotBeModifiedException> { mailService.sendMail(mail) }
+        verify(mailRepository, never()).save(mail)
+    }
+
+    @Test
+    fun `existing draft is loaded with attachments before sending`() {
+        val mailId = UUID.randomUUID()
+        val senderId = UUID.randomUUID()
+        val mail = draft(MailDeliveryMode.EXTERNAL).apply {
+            id = mailId
+            sender = User().apply { id = senderId }
+            externalTo = "customer@example.org"
+        }
+        `when`(mailRepository.findByIdWithAttachments(mailId)).thenReturn(mail)
+        `when`(mailSender.send(mail)).thenReturn(true)
+        `when`(mailRepository.save(mail)).thenReturn(mail)
+
+        val sentMail = mailService.sendExistingDraft(mailId, senderId)
+
+        assertEquals(MailStatus.SENT, sentMail.status)
+        verify(mailRepository).findByIdWithAttachments(mailId)
+        verify(mailSender).send(mail)
+    }
+
+    @Test
+    fun `existing draft owned by another user is hidden`() {
+        val mailId = UUID.randomUUID()
+        val senderId = UUID.randomUUID()
+        val mail = draft(MailDeliveryMode.EXTERNAL).apply {
+            id = mailId
+            sender = User().apply { id = UUID.randomUUID() }
+        }
+        `when`(mailRepository.findByIdWithAttachments(mailId)).thenReturn(mail)
+
+        assertFailsWith<ResourceNotFoundException> {
+            mailService.sendExistingDraft(mailId, senderId)
+        }
+
+        verify(mailSender, never()).send(mail)
         verify(mailRepository, never()).save(mail)
     }
 

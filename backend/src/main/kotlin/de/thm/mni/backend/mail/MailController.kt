@@ -294,9 +294,7 @@ class MailController(
         @AuthenticationPrincipal jwt: Jwt
     ) {
         val userId = mailAccessService.authenticatedUser(jwt).id!!
-        val existingMail = mailAccessService.mailOrNotFound(mailId)
-        mailAccessService.ensureOwnedBy(existingMail, userId)
-        mailService.sendMail(existingMail)
+        mailService.sendExistingDraft(mailId, userId)
     }
 
     /**

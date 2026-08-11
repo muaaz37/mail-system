@@ -1,6 +1,7 @@
 package de.thm.mni.backend.mail
 
 import de.thm.mni.backend.error.MailSendFailedException
+import de.thm.mni.backend.error.ResourceNotFoundException
 import de.thm.mni.backend.error.ResourceCannotBeModifiedException
 import de.thm.mni.backend.mail.dto.MailCreate
 import de.thm.mni.backend.mail.dto.MailPayload
@@ -40,6 +41,20 @@ class MailService(
         val records = mailRecordService.getMailRecordByMailId(mail.id!!)
         records.forEach { record -> mailRecordService.deleteMailRecord(record.id!!) }
         mailRepository.delete(mail)
+    }
+
+    /**
+     * Loads an owned draft with its attachments and sends it through the configured delivery channel.
+     */
+    @Transactional
+    fun sendExistingDraft(mailId: UUID, senderId: UUID): Mail {
+        val mail = mailRepository.findByIdWithAttachments(mailId)
+            ?: throw ResourceNotFoundException("Mail not found")
+        if (mail.sender?.id != senderId) {
+            throw ResourceNotFoundException("Mail not found")
+        }
+
+        return sendMail(mail)
     }
 
     /**

@@ -2,7 +2,9 @@ package de.thm.mni.backend.mail
 
 import de.thm.mni.backend.mail.enums.MailStatus
 import de.thm.mni.backend.user.User
+import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.CrudRepository
+import org.springframework.data.repository.query.Param
 import java.util.UUID
 
 /**
@@ -11,6 +13,9 @@ import java.util.UUID
 interface MailRepository : CrudRepository<Mail, UUID> {
     fun findAllBySender(sender: User): MutableList<Mail>
     fun findAllByStatus(status: MailStatus): MutableList<Mail>
+
+    @Query("select distinct mail from Mail mail left join fetch mail.attachments where mail.id = :id")
+    fun findByIdWithAttachments(@Param("id") id: UUID): Mail?
     fun findAllByInReplyToMail(inReplyToMail: Mail): List<Mail>
     fun findByExternalMessageId(externalMessageId: String): Mail?
     fun existsByExternalMessageId(externalMessageId: String): Boolean
