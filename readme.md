@@ -61,6 +61,8 @@ Keycloak imports this account during the initial startup:
 - Username: `aallanson@example.com`
 - Initial password: `123456`
 
+Additional evaluation accounts are documented in [README.adoc](./README.adoc).
+
 ## Useful commands
 
 The Gradle tasks provide shortcuts for logs, shutdown and a complete reset:
