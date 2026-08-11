@@ -25,9 +25,10 @@ On Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
-Then replace the placeholder values in `.env`. Local infrastructure values such as database, Keycloak and S3 credentials can use local evaluation values. Real SMTP and IMAP mail communication requires valid mailbox settings.
+Local infrastructure values such as database, Keycloak and S3 credentials can use the evaluation defaults from `.env.example`. Replace the SMTP/IMAP mailbox values and the support sender address before startup. Real SMTP and IMAP mail communication requires valid mailbox settings.
 
 Do not commit `.env`.
+The `startLocal` task validates these values and stops before Docker Compose starts if required mailbox placeholders are still present.
 
 ## Start the complete system
 

@@ -348,7 +348,7 @@ Direct backend and frontend dependencies are pinned to fixed versions in their b
 | Target | Required inputs | Command and result
 
 | Production-style container build
-| Docker, Docker Compose and a root `.env` created from `.env.example`. The `.env` file must provide database credentials, S3/SeaweedFS credentials, SMTP/IMAP mailbox settings, support-mail address and Keycloak settings.
+| Docker, Docker Compose and a root `.env` created from `.env.example`. Local infrastructure values can use the documented evaluation defaults. SMTP/IMAP mailbox settings and the support-mail address must be configured for the complete mail workflow.
 | `./gradlew startLocal` creates a local TLS certificate when missing, runs `docker compose up -d --build --remove-orphans`, builds the Angular production bundle, builds the backend runtime image, waits for the HTTPS health endpoint and starts the complete container stack behind the IPS/WAF edge path.
 
 | Direct backend development
@@ -366,7 +366,7 @@ Direct backend and frontend dependencies are pinned to fixed versions in their b
 
 == Configuration
 
-Docker Compose reads runtime values from a root `.env` file. Create it from the template and replace all placeholder credentials before running the system:
+Docker Compose reads runtime values from a root `.env` file. Create it from the template before running the system. Local PostgreSQL, SeaweedFS and Keycloak values in `.env.example` are non-secret evaluation defaults. Replace the SMTP/IMAP mailbox values and `SUPPORT_MAIL_ADDRESS` with the required support mailbox configuration before startup:
 
 [source,bash]
 ----
@@ -374,6 +374,7 @@ cp .env.example .env
 ----
 
 Do not commit `.env` or any other file containing real credentials. Only `.env.example` belongs in version control.
+The `startLocal` task validates `.env` before Docker Compose starts and aborts with a clear message if required mailbox values still contain placeholders.
 
 Required values for Docker Compose:
 
@@ -384,7 +385,7 @@ HTTP_HOST_PORT=80
 HTTPS_HOST_PORT=443
 
 DB_USER=postgres
-DB_PASSWORD=replace_with_local_db_password
+DB_PASSWORD=mail_system_local_db_password
 DB_NAME=mail_system
 
 SERVER_PORT=8080
@@ -395,14 +396,14 @@ APP_NAME=mail-system
 STORAGE_S3_ENDPOINT=http://seaweedfs:8333
 STORAGE_S3_REGION=us-east-1
 STORAGE_S3_BUCKET=mail-attachments
-STORAGE_S3_ACCESS_KEY=replace_with_s3_access_key
-STORAGE_S3_SECRET_KEY=replace_with_s3_secret_key
+STORAGE_S3_ACCESS_KEY=mail-system-local-access-key
+STORAGE_S3_SECRET_KEY=mail-system-local-secret-key
 STORAGE_S3_PATH_STYLE_ACCESS=true
 STORAGE_S3_INITIALIZE_BUCKET=true
 
 MAIL_SMTP_HOST=mail.example.org
 MAIL_SMTP_PORT=465
-MAIL_SMTP_USERNAME=mailbox-user
+MAIL_SMTP_USERNAME=replace_with_mailbox_username
 MAIL_SMTP_PASSWORD=replace_with_mailbox_password
 MAIL_SMTP_AUTH=true
 MAIL_SMTP_PROTOCOL=smtp
@@ -411,7 +412,7 @@ MAIL_SMTP_SSL_ENABLE=true
 
 MAIL_IMAP_HOST=mail.example.org
 MAIL_IMAP_PORT=993
-MAIL_IMAP_USERNAME=mailbox-user
+MAIL_IMAP_USERNAME=replace_with_mailbox_username
 MAIL_IMAP_PASSWORD=replace_with_mailbox_password
 MAIL_IMAP_PROTOCOL=imaps
 MAIL_IMAP_FOLDER=INBOX
@@ -421,12 +422,12 @@ MAILBOX_REFRESH_TIMEOUT_MS=10000
 SUPPORT_MAIL_ADDRESS=support@example.org
 
 KEYCLOAK_ADMIN_USERNAME=admin
-KEYCLOAK_ADMIN_PASSWORD=replace_with_keycloak_admin_password
+KEYCLOAK_ADMIN_PASSWORD=mail_system_local_admin_password
 KEYCLOAK_ISSUER_URI=https://localhost/realms/mail-support
 KEYCLOAK_JWK_SET_URI=http://keycloak:8080/realms/mail-support/protocol/openid-connect/certs
 KEYCLOAK_DB_NAME=keycloak
 KEYCLOAK_DB_USER=keycloak
-KEYCLOAK_DB_PASSWORD=replace_with_keycloak_db_password
+KEYCLOAK_DB_PASSWORD=mail_system_keycloak_db_password
 ----
 
 For direct backend development without Docker, the backend starts with H2 defaults unless Spring datasource variables are exported explicitly:
