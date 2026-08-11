@@ -37,6 +37,14 @@ Build and start the complete system with one Gradle command:
 
 On Windows PowerShell, use `./gradlew.bat startLocal`. The task creates the local TLS certificate when necessary, builds and starts all Docker services in the background, and waits for the health endpoint.
 
+Alternatively, if the local TLS certificate has already been generated, the services can be built and started directly with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+For a fresh checkout, `./gradlew startLocal` is recommended because it also generates the required certificate and verifies that the application becomes healthy.
+
 The first startup can take several minutes because Docker downloads the required base images and builds the frontend, backend, Keycloak, proxy and IPS images. Keep the terminal open and wait until the databases, Keycloak, backend, frontend and proxy report that they are ready or healthy.
 
 Then open [https://localhost/app/](https://localhost/app/). The browser may display a warning because the local environment uses a self-signed TLS certificate.
