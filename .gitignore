@@ -36,12 +36,15 @@ frontend/.git.backup/
 # Runtime uploads
 uploads/
 
-# Local project notes / non-submission artifacts
-# Keep internal reviews, PDFs and notes local. Only submission architecture diagrams are versioned.
+# Local project notes and public documentation policy
+# Keep internal reviews, PDFs and notes local. Version only public architecture diagrams and architectural decision records.
 docs/*
 !docs/infrastructure/
 !docs/infrastructure/**
+!docs/architectural-decisions/
+!docs/architectural-decisions/**
 docs/infrastructure/.DS_Store
+docs/architectural-decisions/.DS_Store
 loesung.md
 
 # Logs and temporary files

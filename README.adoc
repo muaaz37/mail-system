@@ -65,6 +65,8 @@ The system is designed as a split frontend/backend application with externalized
 | Docker Compose starts the Snort IPS, ModSecurity/Nginx WAF reverse proxy, frontend/Caddy, backend, PostgreSQL, SeaweedFS, Keycloak and the Keycloak database with persistent Docker volumes for application, object-storage and identity-provider state.
 |===
 
+The authentication choice, considered alternatives and implemented OpenID Connect flow are documented in link:docs/architectural-decisions/identity-management.adoc[Identity Management with Keycloak and OpenID Connect].
+
 == Scope
 
 The project implements a mail support workflow around a shared support mailbox. The primary use case is a team of authenticated support users processing external support emails as tickets. Internal application mail remains available as an additional workflow and does not use SMTP.
@@ -258,34 +260,36 @@ The backend is structured around vertical business responsibilities. DTOs, mappe
 [source,text]
 ----
 mail-system/
-|-- backend/                 Kotlin/Spring Boot backend
-|   |-- src/main/kotlin/      application source code
-|   |-- src/main/resources/   application configuration and seed data
-|   |-- build.gradle.kts      backend build configuration
-|   `-- Dockerfile            backend runtime image
+|-- backend/                        Kotlin/Spring Boot backend
+|   |-- src/main/kotlin/            application source code
+|   |-- src/main/resources/         application configuration and seed data
+|   |-- build.gradle.kts            backend build configuration
+|   `-- Dockerfile                  backend runtime image
 |
-|-- frontend/                Angular frontend served by Caddy
-|   |-- src/                  pages, components, services, routes and types
-|   |-- public/               static frontend assets
-|   |   `-- runtime-config.js  default browser runtime configuration fallback
-|   |-- proxy.conf.json       Angular dev-server proxy for /api to localhost:8080
-|   |-- package.json          npm scripts and dependencies
-|   |-- build.gradle.kts      Gradle integration for frontend tasks
-|   |-- Caddyfile             production static web server and SPA route fallback
-|   |-- docker-entrypoint.sh  creates container runtime configuration from env vars
-|   `-- Dockerfile            frontend build and Caddy image
+|-- frontend/                       Angular frontend served by Caddy
+|   |-- src/                        pages, components, services, routes and types
+|   |-- public/                     static frontend assets
+|   |   `-- runtime-config.js       default browser runtime configuration fallback
+|   |-- proxy.conf.json             Angular dev-server proxy for /api to localhost:8080
+|   |-- package.json                npm scripts and dependencies
+|   |-- build.gradle.kts            Gradle integration for frontend tasks
+|   |-- Caddyfile                   production static web server and SPA route fallback
+|   |-- docker-entrypoint.sh        creates container runtime configuration from env vars
+|   `-- Dockerfile                  frontend build and Caddy image
 |
-|-- ips/                     Snort inline IPS and packet-forwarding entry point
-|-- keycloak/                local Keycloak Docker image and realm import
-|-- proxy/                   ModSecurity/Nginx WAF and reverse proxy
-|-- scripts/                 local operational helper scripts
-|-- docs/infrastructure/     C4 architecture diagrams embedded in this README
-|-- docker-compose.yml       local container orchestration
-|-- build.gradle.kts         root Gradle orchestration
-|-- settings.gradle.kts      Gradle module declaration
-|-- .env.example             environment template without real credentials
-|-- LICENSE                  project license
-`-- README.adoc              project documentation
+|-- ips/                            Snort inline IPS and packet-forwarding entry point
+|-- keycloak/                       local Keycloak Docker image and realm import
+|-- proxy/                          ModSecurity/Nginx WAF and reverse proxy
+|-- scripts/                        local operational helper scripts
+|-- docs/                           supplementary project documentation
+|   |-- architectural-decisions/    decisions about dependencies and identity management
+|   `-- infrastructure/             C4 architecture diagrams embedded in this README
+|-- docker-compose.yml              local container orchestration
+|-- build.gradle.kts                root Gradle orchestration
+|-- settings.gradle.kts             Gradle module declaration
+|-- .env.example                    environment template without real credentials
+|-- LICENSE                         project license
+`-- README.adoc                     project documentation
 ----
 
 == Technology Stack
@@ -321,6 +325,8 @@ mail-system/
 | Quality
 | detekt 2.0.0-alpha.3 for Kotlin, ESLint 10.3.0 and angular-eslint 21.3.1 for Angular/TypeScript
 |===
+
+The fixed-version decision and selected build platform are documented in link:docs/architectural-decisions/dependency-management.adoc[Fixed Build and Dependency Versions].
 
 == Prerequisites
 

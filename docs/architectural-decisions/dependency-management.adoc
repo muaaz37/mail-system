@@ -1,0 +1,83 @@
+= Decision: Fixed Build and Dependency Versions
+:toc:
+:toclevels: 2
+:sectanchors:
+
+== Context
+
+The application must be buildable without relying on an IDE or versions already installed on a developer's computer.
+Dynamic declarations such as `+`, version ranges, snapshots or `latest.release` can resolve differently over time. In that case, the same Git revision may compile against different libraries without a reviewed source change.
+
+The project therefore needs a reproducible build environment and an explicitly selected dependency set.
+
+== Decision
+
+Gradle plugins, direct backend dependencies and imported BOMs use fixed versions. Gradle, Java, Kotlin, Node.js and npm are pinned as part of the build environment because their versions influence compilation and generated artifacts.
+
+A newer version is introduced only as an explicit project change and is accepted after compilation, linting and tests succeed. Fixed versions therefore control updates without preventing regular maintenance.
+
+== Selected Build Platform
+
+[cols="2,1,4",options="header"]
+|===
+| Component | Version | Rationale
+
+| Gradle Wrapper
+| 9.6.1
+| The wrapper gives local and container builds the same Gradle distribution without requiring a global Gradle installation. This maintenance release is compatible with Spring Boot 4.1.
+
+| Spring Boot
+| 4.1.0
+| Selected as the stable application platform. All Spring Boot starters use the same release so Web MVC, Security, Data JPA, Validation and Mail remain on one compatible Spring generation.
+
+| Java
+| 21
+| Java 21 is the common LTS baseline for the Gradle toolchain and both backend Docker stages. It is supported by the selected Gradle and Spring Boot versions and avoids differences between development and production runtime behavior.
+
+| Kotlin
+| 2.3.21
+| The compiler, JVM plugin, Spring plugin, reflection library and Kotlin tests use one patch version. This prevents compiler-plugin and runtime metadata mismatches.
+
+| Node.js / npm
+| 24.12.0 / 11.6.2
+| Gradle downloads both tools for the frontend module. The production frontend build therefore does not depend on a developer's global Node.js installation.
+|===
+
+== Dependency Selection
+
+Backend dependency versions are defined once near the beginning of `backend/build.gradle.kts` and reused in the dependency declarations.
+
+Spring libraries follow the Spring Boot 4.1 platform: Boot starters use `4.1.0`, while Spring Integration Mail and Spring Security Test use the matching `7.1.0` generation. This avoids combining incompatible Spring release lines.
+
+Libraries outside the Spring platform are selected according to their responsibility:
+
+* SpringDoc `3.0.3` is the Spring Boot 4 compatible generation and provides the OpenAPI document and Swagger UI.
+* Jackson Kotlin `3.1.4` matches the Jackson 3 generation used by Spring Boot and preserves Kotlin-specific information such as nullability and constructor parameters during JSON mapping.
+* AWS SDK S3 and its BOM use `2.25.60`. Importing the BOM keeps the S3 client and all transitive AWS modules on the same tested release while the client communicates with SeaweedFS through its S3-compatible API.
+* PostgreSQL `42.7.11` supports the PostgreSQL 16 database used by the deployed backend and contains current PgJDBC security corrections.
+* H2 `2.4.240` provides a lightweight database for local development and tests. The Docker deployment uses PostgreSQL instead.
+* JUnit Platform `6.0.3` fixes the test launcher version so that test discovery does not depend on the IDE.
+* detekt `2.0.0-alpha.3` is pinned because it supports the selected Kotlin generation. It performs static analysis during the build and is not packaged with the application.
+
+=== Security Assessment
+
+A fixed version is not automatically secure. Security findings are assessed by their affected version range, whether the vulnerable functionality is used and whether the component is present in the runtime artifact.
+
+* Earlier PostgreSQL drivers contained weaknesses in connection authentication and could be overloaded by a malicious database server. Version `42.7.11` contains the corresponding corrections. In addition, the application connects only to the PostgreSQL container on an internal Docker network.
+* Earlier Jackson versions could bypass parts of the type validation when processing specially prepared JSON data. Version `3.1.4` contains the corrections. The application also does not enable the polymorphic default typing required for important variants of these attacks.
+* Older H2 versions allowed unsafe connection settings to be abused through an exposed H2 Console. Version `2.4.240` is no longer affected by this issue. The Docker deployment also uses PostgreSQL and does not expose an H2 Console.
+* Spring, SpringDoc and the AWS SDK are declared with Gradle's `implementation` configuration. They are required for compilation and remain available when the application runs. Authentication and internal networks reduce some attack paths, but security updates for these libraries still need to be reviewed and tested.
+
+== Verification
+
+The Gradle wrapper performs dependency resolution, compilation, linting, testing and distribution creation without an IDE:
+
+[source,bash]
+----
+./gradlew --version
+./gradlew lint build
+./gradlew installDist
+docker compose build mail-server
+----
+
+The build is accepted when these commands succeed and no backend declaration contains a dynamic version. Changes to database, mail or storage libraries additionally require the corresponding PostgreSQL, SMTP/IMAP or SeaweedFS workflow to be tested.
