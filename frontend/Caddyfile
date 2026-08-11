@@ -11,6 +11,13 @@
 		file_server
 	}
 
+	handle /app/runtime-config.js {
+		root * /config
+		rewrite * /runtime-config.js
+		header Cache-Control "no-store"
+		file_server
+	}
+
 	handle_path /app/* {
 		try_files {path} /index.html
 		file_server

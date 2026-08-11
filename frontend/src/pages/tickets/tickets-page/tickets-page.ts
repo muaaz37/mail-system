@@ -1,10 +1,12 @@
-import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
 import { Toast } from 'primeng/toast';
+import { EMPTY, catchError, exhaustMap, finalize, timeout, timer } from 'rxjs';
+import { MAILBOX_REFRESH_INTERVAL_MS, MAILBOX_REFRESH_TIMEOUT_MS } from '../../../constants';
 import { TicketsService } from '../../../services/tickets/tickets-service';
 import {
   SupportTicket,
@@ -48,13 +50,15 @@ export class TicketsPage implements OnInit {
   private readonly ticketsService = inject(TicketsService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private hasReportedLoadError = false;
 
   /**
    * Configures the queue view from the current route and loads its messages.
    */
   ngOnInit(): void {
     this.configureFromPath();
-    this.loadItems();
+    this.startAutoRefresh();
   }
 
   /**
@@ -200,32 +204,61 @@ export class TicketsPage implements OnInit {
   }
 
   /**
-   * Loads external support tickets for the configured queue view.
+   * Starts periodic list refresh so server-side IMAP imports become visible without a browser reload.
    */
-  private loadItems(): void {
-    this.isLoading.set(true);
+  private startAutoRefresh(): void {
+    timer(0, MAILBOX_REFRESH_INTERVAL_MS)
+      .pipe(
+        exhaustMap((cycle) => {
+          const initialLoad = cycle === 0 && this.items().length === 0;
+          this.isLoading.set(initialLoad);
 
-    this.ticketsService.getTickets(this.view).subscribe({
-      next: (tickets) => {
-        const ticketItems = tickets.map((ticket) => this.mapTicket(ticket)).sort(
-          (first, second) =>
-            new Date(second.lastActivityAt).getTime() -
-            new Date(first.lastActivityAt).getTime(),
-        );
+          return this.ticketsService.getTickets(this.view).pipe(
+            timeout({ first: MAILBOX_REFRESH_TIMEOUT_MS }),
+            catchError((err: unknown) => {
+              this.handleLoadError(err);
+              return EMPTY;
+            }),
+            finalize(() => {
+              this.isLoading.set(false);
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((tickets) => this.updateItems(tickets));
+  }
 
-        this.items.set(ticketItems);
-        this.isLoading.set(false);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Failed to Load Messages',
-          detail: readApiErrorMessage(err),
-        });
+  /**
+   * Replaces the current queue with the latest backend state.
+   *
+   * @param tickets Support tickets returned by the backend.
+   */
+  private updateItems(tickets: SupportTicket[]): void {
+    const ticketItems = tickets.map((ticket) => this.mapTicket(ticket)).sort(
+      (first, second) =>
+        new Date(second.lastActivityAt).getTime() -
+        new Date(first.lastActivityAt).getTime(),
+    );
 
-        this.isLoading.set(false);
-      },
+    this.items.set(ticketItems);
+    this.hasReportedLoadError = false;
+  }
+
+  /**
+   * Shows one sanitized load error until a later refresh succeeds.
+   */
+  private handleLoadError(err: unknown): void {
+    if (this.hasReportedLoadError) {
+      return;
+    }
+
+    this.messageService.add({
+      severity: 'error',
+      summary: 'Failed to Load Messages',
+      detail: readApiErrorMessage(err),
     });
+    this.hasReportedLoadError = true;
   }
 
   /**

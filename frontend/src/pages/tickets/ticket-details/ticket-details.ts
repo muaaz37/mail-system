@@ -1,11 +1,13 @@
 import { Location } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, Input, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, Input, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
 import { Toast } from 'primeng/toast';
+import { EMPTY, catchError, exhaustMap, finalize, timeout, timer } from 'rxjs';
+import { MAILBOX_REFRESH_INTERVAL_MS, MAILBOX_REFRESH_TIMEOUT_MS } from '../../../constants';
 import { TicketsService } from '../../../services/tickets/tickets-service';
 import { Mail, MailDeliveryMode, MailStatus } from '../../../types/mails';
 import {
@@ -36,12 +38,14 @@ export class TicketDetails implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
+  private readonly destroyRef = inject(DestroyRef);
+  private hasReportedLoadError = false;
 
   /**
-   * Loads the selected ticket and lets the backend mark it as read for the current user.
+   * Loads the selected ticket and keeps the conversation synchronized while it is open.
    */
   ngOnInit(): void {
-    this.loadTicket();
+    this.startAutoRefresh();
   }
 
   /**
@@ -221,20 +225,32 @@ export class TicketDetails implements OnInit {
   }
 
   /**
-   * Loads ticket metadata and conversation mails from the backend.
+   * Starts periodic detail refresh so newly imported replies appear in the open conversation.
    */
-  private loadTicket(): void {
-    this.isLoading.set(true);
-    this.ticketsService.getTicket(this.id).subscribe({
-      next: (detail) => {
+  private startAutoRefresh(): void {
+    timer(0, MAILBOX_REFRESH_INTERVAL_MS)
+      .pipe(
+        exhaustMap((cycle) => {
+          const initialLoad = cycle === 0 && this.detail() === null;
+          this.isLoading.set(initialLoad);
+
+          return this.ticketsService.getTicket(this.id).pipe(
+            timeout({ first: MAILBOX_REFRESH_TIMEOUT_MS }),
+            catchError((err: unknown) => {
+              this.handleLoadError(err);
+              return EMPTY;
+            }),
+            finalize(() => {
+              this.isLoading.set(false);
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((detail) => {
         this.detail.set(detail);
-        this.isLoading.set(false);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.showError('Failed to Load Ticket', err);
-        this.isLoading.set(false);
-      },
-    });
+        this.hasReportedLoadError = false;
+      });
   }
 
   /**
@@ -276,7 +292,7 @@ export class TicketDetails implements OnInit {
         }
         this.messageService.add({ severity: 'success', summary: successSummary });
       },
-      error: (err: HttpErrorResponse) => this.showError(successSummary, err),
+      error: (err: unknown) => this.showError(successSummary, err),
     });
   }
 
@@ -286,11 +302,23 @@ export class TicketDetails implements OnInit {
    * @param summary Short error title shown to the user.
    * @param err HTTP error returned by the backend.
    */
-  private showError(summary: string, err: HttpErrorResponse): void {
+  private showError(summary: string, err: unknown): void {
     this.messageService.add({
       severity: 'error',
       summary,
       detail: readApiErrorMessage(err),
     });
+  }
+
+  /**
+   * Reports a ticket refresh error once until a later refresh succeeds.
+   */
+  private handleLoadError(err: unknown): void {
+    if (this.hasReportedLoadError) {
+      return;
+    }
+
+    this.showError('Failed to Load Ticket', err);
+    this.hasReportedLoadError = true;
   }
 }

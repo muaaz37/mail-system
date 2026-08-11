@@ -1,0 +1,1 @@
+window.mailSystemConfig = window.mailSystemConfig || {};

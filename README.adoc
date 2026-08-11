@@ -55,6 +55,9 @@ The system is designed as a split frontend/backend application with externalized
 | IMAP import
 | Imported messages are stored as `RECEIVED`, keep external sender metadata, persist attachments, skip duplicate `Message-ID` values and are marked as read after successful handling. App-generated SMTP messages are marked with an origin header and ignored during IMAP import.
 
+| Mailbox refresh
+| Ticket queues and open ticket conversations refresh through a runtime-configured frontend interval so newly imported support mails become visible without a browser reload. The interval and request timeout are configured through environment variables and bounded by frontend safety limits.
+
 | OpenAPI
 | The backend exposes a generated OpenAPI document and Swagger UI through the HTTPS edge gateway under `/api`. Protected operations document JWT bearer authentication.
 
@@ -99,6 +102,9 @@ The current implementation addresses the following functional, architectural and
 
 | Mail import
 | IMAP polling imports unread support mailbox messages, skips already known message IDs, stores imported mails and attachments, and marks successfully handled messages as read.
+
+| Mailbox display refresh
+| Ticket queues and open ticket conversations update through a bounded frontend refresh interval. Refresh requests are prevented from overlapping and time out safely if the backend does not respond.
 
 | Attachment storage
 | Persistent attachment binaries are stored outside the backend filesystem in SeaweedFS through the S3-compatible API. PostgreSQL stores attachment metadata and object keys.
@@ -261,10 +267,12 @@ mail-system/
 |-- frontend/                Angular frontend served by Caddy
 |   |-- src/                  pages, components, services, routes and types
 |   |-- public/               static frontend assets
+|   |   `-- runtime-config.js  default browser runtime configuration fallback
 |   |-- proxy.conf.json       Angular dev-server proxy for /api to localhost:8080
 |   |-- package.json          npm scripts and dependencies
 |   |-- build.gradle.kts      Gradle integration for frontend tasks
 |   |-- Caddyfile             production static web server and SPA route fallback
+|   |-- docker-entrypoint.sh  creates container runtime configuration from env vars
 |   `-- Dockerfile            frontend build and Caddy image
 |
 |-- ips/                     Snort inline IPS and packet-forwarding entry point
@@ -401,6 +409,8 @@ MAIL_IMAP_PASSWORD=replace_with_mailbox_password
 MAIL_IMAP_PROTOCOL=imaps
 MAIL_IMAP_FOLDER=INBOX
 MAIL_POLLING_INTERVAL_MS=60000
+MAILBOX_REFRESH_INTERVAL_MS=15000
+MAILBOX_REFRESH_TIMEOUT_MS=10000
 SUPPORT_MAIL_ADDRESS=support@example.org
 
 KEYCLOAK_ADMIN_USERNAME=admin
@@ -559,7 +569,7 @@ The generated runtime artifacts are self-contained for their container runtime u
 
 | Frontend distribution
 | `frontend/build/angular/browser/`, `frontend/build/install/frontend/` and `build/install/mail-system/frontend/`
-| Compiled Angular HTML, JavaScript, CSS and static assets. The frontend container copies the browser bundle into Caddy's `/srv` webroot; no Angular development server or `node_modules` directory is required at runtime.
+| Compiled Angular HTML, JavaScript, CSS and static assets. The frontend container copies the browser bundle into Caddy's `/srv` webroot and creates `/config/runtime-config.js` from environment variables at startup; no Angular development server or `node_modules` directory is required at runtime.
 
 | Container images
 | Built by `docker compose build` or through `./gradlew startLocal`
@@ -654,6 +664,8 @@ External mails are sent through the configured SMTP account. The sender address 
 IMAP polling is enabled in the backend application. The scheduler uses `mail.polling.interval-ms` / `MAIL_POLLING_INTERVAL_MS` and imports unread messages through the same import flow used by operational diagnostics.
 
 Imported messages are persisted as `RECEIVED`, duplicate `Message-ID` values are skipped, attachments are stored through the attachment storage abstraction, app-generated SMTP copies are skipped through the application origin header, and successfully handled messages are marked as read on the IMAP server. Imported support mails are visible to authenticated support users.
+
+The Angular ticket queues and open ticket conversations refresh periodically using `MAILBOX_REFRESH_INTERVAL_MS`. A request timeout configured by `MAILBOX_REFRESH_TIMEOUT_MS` prevents a hanging refresh request from blocking later refresh cycles. The frontend applies minimum and maximum bounds to both values before using them.
 
 Health and IMAP diagnostics are runtime operational endpoints and are intentionally hidden from the generated OpenAPI/Swagger documentation.
 

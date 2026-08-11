@@ -9,6 +9,7 @@ RUN npm run build -- --base-href /app/
 
 FROM caddy:2.6.4-alpine
 COPY Caddyfile /etc/caddy/Caddyfile
+COPY docker-entrypoint.sh /usr/local/bin/mail-system-frontend-entrypoint
 COPY --from=builder /app/build/angular/browser/ /srv/
 
 # Remove Caddy's permission for privileged ports
@@ -21,7 +22,9 @@ RUN addgroup --system caddy \
     && adduser --system --disabled-password --no-create-home --ingroup caddy caddy
 
 # Set ownership of the Caddy directories to the caddy user
-RUN chown -R caddy:caddy /srv /etc/caddy
+RUN chmod +x /usr/local/bin/mail-system-frontend-entrypoint \
+    && mkdir -p /config \
+    && chown -R caddy:caddy /srv /etc/caddy /config
 
 USER caddy
 
@@ -30,3 +33,5 @@ HEALTHCHECK --interval=5s --timeout=5s --start-period=30s --retries=30 \
     CMD wget --quiet --spider http://localhost:8080/app/ || exit 1
 
 EXPOSE 8080
+
+ENTRYPOINT ["/usr/local/bin/mail-system-frontend-entrypoint"]

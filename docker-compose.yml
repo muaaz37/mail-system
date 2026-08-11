@@ -91,6 +91,8 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: ${SERVER_PORT:-8080}
+      MAILBOX_REFRESH_INTERVAL_MS: ${MAILBOX_REFRESH_INTERVAL_MS:-15000}
+      MAILBOX_REFRESH_TIMEOUT_MS: ${MAILBOX_REFRESH_TIMEOUT_MS:-10000}
     depends_on:
       mail-server:
         condition: service_healthy
