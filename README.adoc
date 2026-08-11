@@ -254,32 +254,34 @@ The backend is structured around vertical business responsibilities. DTOs, mappe
 [source,text]
 ----
 mail-system/
-|-- backend/                 Kotlin/Spring Boot backend
-|   |-- src/main/kotlin/      application source code
-|   |-- src/main/resources/   application configuration and seed data
-|   |-- build.gradle.kts      backend build configuration
-|   `-- Dockerfile            backend runtime image
+|-- backend/                        Kotlin/Spring Boot backend
+|   |-- src/main/kotlin/            application source code
+|   |-- src/main/resources/         application configuration and seed data
+|   |-- build.gradle.kts            backend build configuration
+|   `-- Dockerfile                  backend runtime image
 |
-|-- frontend/                Angular frontend served by Caddy
-|   |-- src/                  pages, components, services, routes and types
-|   |-- public/               static frontend assets
-|   |-- proxy.conf.json       Angular dev-server proxy for /api to localhost:8080
-|   |-- package.json          npm scripts and dependencies
-|   |-- build.gradle.kts      Gradle integration for frontend tasks
-|   |-- Caddyfile             production static web server and SPA route fallback
-|   `-- Dockerfile            frontend build and Caddy image
+|-- frontend/                       Angular frontend served by Caddy
+|   |-- src/                        pages, components, services, routes and types
+|   |-- public/                     static frontend assets
+|   |-- proxy.conf.json             Angular dev-server proxy for /api to localhost:8080
+|   |-- package.json                npm scripts and dependencies
+|   |-- build.gradle.kts            Gradle integration for frontend tasks
+|   |-- Caddyfile                   production static web server and SPA route fallback
+|   `-- Dockerfile                  frontend build and Caddy image
 |
-|-- ips/                     Snort inline IPS and packet-forwarding entry point
-|-- keycloak/                local Keycloak Docker image and realm import
-|-- proxy/                   ModSecurity/Nginx WAF and reverse proxy
-|-- scripts/                 local operational helper scripts
-|-- docs/infrastructure/     C4 architecture diagrams embedded in this README
-|-- docker-compose.yml       local container orchestration
-|-- build.gradle.kts         root Gradle orchestration
-|-- settings.gradle.kts      Gradle module declaration
-|-- .env.example             environment template without real credentials
-|-- LICENSE                  project license
-`-- README.adoc              project documentation
+|-- ips/                            Snort inline IPS and packet-forwarding entry point
+|-- keycloak/                       local Keycloak Docker image and realm import
+|-- proxy/                          ModSecurity/Nginx WAF and reverse proxy
+|-- scripts/                        local operational helper scripts
+|-- docs/                           supplementary project documentation
+|   |-- architectural-decisions/    decisions about dependencies and identity management
+|   `-- infrastructure/             C4 architecture diagrams embedded in this README
+|-- docker-compose.yml              local container orchestration
+|-- build.gradle.kts                root Gradle orchestration
+|-- settings.gradle.kts             Gradle module declaration
+|-- .env.example                    environment template without real credentials
+|-- LICENSE                         project license
+`-- README.adoc                     project documentation
 ----
 
 == Technology Stack
