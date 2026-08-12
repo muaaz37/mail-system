@@ -649,7 +649,7 @@ The backend imports local sample profiles from `backend/src/main/resources/data.
 | 5 | Alikee | Raisbeck | `araisbeck4@example.com` | `123456`
 |===
 
-For local evaluation, `keycloak/realm-mail-support.json` imports matching Keycloak test identities for these sample profiles. The initial password is temporary in Keycloak, so the first login can require setting a new password. Replace evaluation identities and credentials for real deployments.
+For local evaluation, `keycloak/realm-mail-support.json` imports matching Keycloak test identities for these sample profiles. Replace evaluation identities and credentials for real deployments.
 
 == Operational Notes
 
