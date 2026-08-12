@@ -309,7 +309,7 @@ mail-system/
 | Keycloak 26.6.3 with OpenID Connect
 
 | Persistence
-| PostgreSQL 16 for Docker Compose, H2 2.4.240 as direct-start fallback
+| PostgreSQL 16 for Docker Compose, H2 2.4.240 as fallback for isolated backend runs
 
 | Attachment storage
 | SeaweedFS 4.38 through the S3-compatible API, AWS SDK S3 2.25.60 client in the backend
@@ -331,11 +331,13 @@ The fixed-version decision and selected build platform are documented in link:do
 
 == Prerequisites
 
-Install the following tools for local operation and development:
+Running the complete application locally requires Docker and Docker Compose. The local runtime depends on the Compose-managed PostgreSQL, SeaweedFS, Keycloak, frontend/Caddy, backend, WAF and IPS services.
 
-* Java 21
-* Docker and Docker Compose
-* Node.js and npm when working directly in `frontend/`
+Install the following tools:
+
+* Docker and Docker Compose for the complete local application runtime
+* Java 21 for Gradle build, check and orchestration tasks
+* Node.js and npm only when working directly in `frontend/`
 * A compatible SMTP/IMAP mailbox when testing real mail integration
 
 The Gradle wrapper downloads the configured Gradle version automatically. The Gradle-driven frontend build downloads the configured Node/npm versions through the Node Gradle plugin.
@@ -347,17 +349,17 @@ Direct backend and frontend dependencies are pinned to fixed versions in their b
 |===
 | Target | Required inputs | Command and result
 
-| Production-style container build
+| Complete local application runtime
 | Docker, Docker Compose and a root `.env` created from `.env.example`. Local infrastructure values can use the documented evaluation defaults. SMTP/IMAP mailbox settings and the support-mail address must be configured for the complete mail workflow.
 | `./gradlew startLocal` creates a local TLS certificate when missing, runs `docker compose up -d --build --remove-orphans`, builds the Angular production bundle, builds the backend runtime image, waits for the HTTPS health endpoint and starts the complete container stack behind the IPS/WAF edge path.
 
-| Direct backend development
-| Java 21. Optional datasource and mail/storage environment variables can be exported from `.env`; otherwise the backend can use its direct-start fallback configuration for local development.
-| `./gradlew :backend:bootRun` starts the Spring Boot API directly on the local development port.
+| Backend module development only
+| Java 21 and separately reachable infrastructure if the feature under development needs Keycloak, PostgreSQL, S3 storage or SMTP/IMAP.
+| `./gradlew :backend:bootRun` starts only the Spring Boot process on the local development port. This is not a complete application startup path.
 
-| Direct frontend development
+| Frontend module development only
 | Node.js and npm when running the Angular development server directly outside Gradle.
-| `cd frontend && npm ci && npm run start` starts the Angular development server. Requests to `/api/*` are forwarded through `frontend/proxy.conf.json`.
+| `cd frontend && npm ci && npm run start` starts only the Angular development server. Requests to `/api/*` are forwarded through `frontend/proxy.conf.json` and still require a reachable backend and identity provider.
 
 | Verification build
 | Java 21. The Gradle frontend integration downloads the configured Node.js and npm versions automatically.
@@ -430,7 +432,7 @@ KEYCLOAK_DB_USER=keycloak
 KEYCLOAK_DB_PASSWORD=mail_system_keycloak_db_password
 ----
 
-For direct backend development without Docker, the backend starts with H2 defaults unless Spring datasource variables are exported explicitly:
+For isolated backend development outside Docker, the backend has H2 defaults unless Spring datasource variables are exported explicitly. This mode is useful for backend implementation work and tests, but it does not provide the complete application runtime, browser login flow, edge gateway, Keycloak, PostgreSQL, SeaweedFS or mail infrastructure:
 
 [source,env]
 ----
@@ -518,11 +520,16 @@ The Docker Compose setup implements the required security layers for local evalu
 
 Snort runs in front of TLS termination and protects the lower network path before the WAF. ModSecurity inspects decrypted API HTTP traffic at the application layer after TLS termination.
 
-== Run For Development
+== Direct Module Development
 
-=== Backend
+[IMPORTANT]
+====
+Use `./gradlew startLocal` for the complete local application. The commands in this section start individual modules only and are intended for focused development/debugging when the required dependent services are already available separately.
+====
 
-Start the backend from the repository root with the Gradle wrapper. If mail credentials are stored in `.env`, export them before starting the process:
+=== Backend Only
+
+Start only the backend process from the repository root with the Gradle wrapper. If mail credentials or external service settings are stored in `.env`, export them before starting the process:
 
 [source,bash]
 ----
@@ -532,11 +539,11 @@ set +a
 ./gradlew :backend:bootRun
 ----
 
-The backend listens on http://localhost:8080 during direct local development.
+The backend listens on http://localhost:8080 in this mode. Protected API behavior still depends on a reachable Keycloak issuer/JWK endpoint, and attachment or mail features need reachable storage and SMTP/IMAP services.
 
-=== Frontend
+=== Frontend Only
 
-Start the Angular development server from the frontend module:
+Start only the Angular development server from the frontend module:
 
 [source,bash]
 ----
@@ -545,7 +552,7 @@ npm ci
 npm run start
 ----
 
-The frontend development server listens on http://localhost:4200. It uses `frontend/proxy.conf.json` so browser requests to `/api/*` are forwarded to the backend on http://localhost:8080. This mirrors the Docker setup, where the edge gateway forwards `/api/*` to the backend.
+The frontend development server listens on http://localhost:4200. It uses `frontend/proxy.conf.json` so browser requests to `/api/*` are forwarded to the backend on http://localhost:8080. This is only a development convenience and does not replace the Docker edge gateway or Keycloak setup.
 
 If the backend URL changes for direct development, update `frontend/proxy.conf.json` and restart `npm run start`.
 
@@ -700,9 +707,9 @@ Rebuild the Docker image from the repository root. The backend Dockerfile runs t
 
 `startLocal` starts the containers in the background and then waits until `https://localhost/api/health` is reachable through the IPS/WAF path. Temporary `502 Bad Gateway` entries during this phase mean the proxy received a request before the backend accepted traffic. They are only a startup problem if the health wait times out.
 
-=== Frontend cannot reach the API during development
+=== Frontend cannot reach the API during module development
 
-For Docker, access the application through https://localhost/app/ so the edge gateway can forward `/api/*` to the backend. For separate development servers, make sure the backend is reachable on http://localhost:8080 and restart `npm run start` so Angular loads `proxy.conf.json`.
+For the complete local application, access the frontend through https://localhost/app/ so the edge gateway can forward `/api/*` to the backend. When using the frontend development server separately, make sure the backend is reachable on http://localhost:8080 and restart `npm run start` so Angular loads `proxy.conf.json`.
 
 === Login fails after deleting Docker volumes
 
