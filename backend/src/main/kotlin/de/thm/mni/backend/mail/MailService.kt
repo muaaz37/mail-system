@@ -33,10 +33,16 @@ class MailService(
     private val mailReplyService: MailReplyService
 ) {
     /**
-     * Deletes a mail with its stored attachments and internal recipient records.
+     * Loads an owned mail with its attachments and deletes its stored files and recipient records.
      */
     @Transactional
-    fun deleteMail(mail: Mail) {
+    fun deleteMail(mailId: UUID, senderId: UUID) {
+        val mail = mailRepository.findByIdWithAttachments(mailId)
+            ?: throw ResourceNotFoundException("Mail not found")
+        if (mail.sender?.id != senderId) {
+            throw ResourceNotFoundException("Mail not found")
+        }
+
         mailAttachmentHandler.deleteAttachments(mail)
         val records = mailRecordService.getMailRecordByMailId(mail.id!!)
         records.forEach { record -> mailRecordService.deleteMailRecord(record.id!!) }

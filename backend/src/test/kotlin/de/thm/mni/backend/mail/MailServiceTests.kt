@@ -22,13 +22,15 @@ import de.thm.mni.backend.user.User
 class MailServiceTests {
     private val mailRepository = mock(MailRepository::class.java)
     private val mailSender = mock(MailSender::class.java)
+    private val mailRecordService = mock(MailRecordService::class.java)
+    private val mailAttachmentHandler = mock(MailAttachmentHandler::class.java)
     private val ticketLifecycleService = mock(SupportTicketLifecycleService::class.java)
     private val mailService = MailService(
         mailRepository,
         mailSender,
-        mock(MailRecordService::class.java),
+        mailRecordService,
         mock(MailRecipientValidator::class.java),
-        mock(MailAttachmentHandler::class.java),
+        mailAttachmentHandler,
         mock(SupportReplyService::class.java),
         ticketLifecycleService,
         mock(MailReplyService::class.java)
@@ -100,6 +102,41 @@ class MailServiceTests {
 
         verify(mailSender, never()).send(mail)
         verify(mailRepository, never()).save(mail)
+    }
+
+    @Test
+    fun `existing mail is loaded with attachments before deleting`() {
+        val mailId = UUID.randomUUID()
+        val senderId = UUID.randomUUID()
+        val mail = draft(MailDeliveryMode.EXTERNAL).apply {
+            id = mailId
+            sender = User().apply { id = senderId }
+        }
+        `when`(mailRepository.findByIdWithAttachments(mailId)).thenReturn(mail)
+        `when`(mailRecordService.getMailRecordByMailId(mailId)).thenReturn(emptyList())
+
+        mailService.deleteMail(mailId, senderId)
+
+        verify(mailRepository).findByIdWithAttachments(mailId)
+        verify(mailAttachmentHandler).deleteAttachments(mail)
+        verify(mailRepository).delete(mail)
+    }
+
+    @Test
+    fun `existing mail owned by another user is hidden before deleting`() {
+        val mailId = UUID.randomUUID()
+        val senderId = UUID.randomUUID()
+        val mail = draft(MailDeliveryMode.EXTERNAL).apply {
+            id = mailId
+            sender = User().apply { id = UUID.randomUUID() }
+        }
+        `when`(mailRepository.findByIdWithAttachments(mailId)).thenReturn(mail)
+
+        assertFailsWith<ResourceNotFoundException> {
+            mailService.deleteMail(mailId, senderId)
+        }
+
+        verify(mailRepository, never()).delete(mail)
     }
 
     private fun draft(deliveryMode: MailDeliveryMode): Mail = Mail().apply {
